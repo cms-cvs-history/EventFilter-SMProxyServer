@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.1 2007/04/26 00:54:53 hcheung Exp $
+// $Id: SMProxyServer.cc,v 1.1.2.1 2007/04/29 18:19:56 hcheung Exp $
 
 #include <iostream>
 #include <iomanip>
@@ -47,6 +47,10 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
   xdaq::Application(s),
   fsm_(this), 
   ah_(0), 
+  collateDQM_(false),
+  filePrefixDQM_("/tmp/DQM"),
+  purgeTimeDQM_(DEFAULT_PURGE_TIME),
+  readyTimeDQM_(DEFAULT_READY_TIME),
   receivedEvents_(0),
   receivedDQMEvents_(0),
   mybuffer_(7000000),
@@ -92,9 +96,10 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
   xgi::bind(this,&SMProxyServer::receiveEventWebPage,     "pushEventData");
   xgi::bind(this,&SMProxyServer::receiveDQMEventWebPage,  "pushDQMEventData");
 
-  curlTimeout_ = 120; // seconds
-  ispace->fireItemAvailable("curlTimeout", &curlTimeout_);
-
+  ispace->fireItemAvailable("collateDQM",     &collateDQM_);
+  ispace->fireItemAvailable("purgeTimeDQM",   &purgeTimeDQM_);
+  ispace->fireItemAvailable("readyTimeDQM",   &readyTimeDQM_);
+  ispace->fireItemAvailable("filePrefixDQM",  &filePrefixDQM_);
   //nLogicalDisk_   = 0;
 
   //ispace->fireItemAvailable("nLogicalDisk", &nLogicalDisk_);
@@ -1223,12 +1228,20 @@ void SMProxyServer::receiveDQMEventWebPage(xgi::Input *in, xgi::Output *out)
       auto_ptr< vector<char> > bufPtr(new vector<char>(contentLength));
       in->read(&(*bufPtr)[0], contentLength);
       DQMEventMsgView dqmEventView(&(*bufPtr)[0]);
-      boost::shared_ptr<DQMEventServer> DQMeventServer;
+      //boost::shared_ptr<DQMEventServer> DQMeventServer;
+      //if (dpm_.get() != NULL)
+      //{
+      //  DQMeventServer = dpm_->getDQMEventServer();
+      //  if(DQMeventServer.get() != NULL) {
+      //    DQMeventServer->processDQMEvent(dqmEventView);
+      //  }
+      //}
+      boost::shared_ptr<stor::DQMServiceManager> dqmManager;
       if (dpm_.get() != NULL)
       {
-        DQMeventServer = dpm_->getDQMEventServer();
-        if(DQMeventServer.get() != NULL) {
-          DQMeventServer->processDQMEvent(dqmEventView);
+        dqmManager = dpm_->getDQMServiceManager();
+        if(dqmManager.get() != NULL) {
+          dqmManager->manageDQMEventMsg(dqmEventView);
         }
       }
       ++receivedDQMEvents_;
@@ -1303,6 +1316,10 @@ void SMProxyServer::setupFlashList()
   is->fireItemAvailable("stateName",            fsm_.stateName());
   is->fireItemAvailable("progressMarker",       &progressMarker_);
   is->fireItemAvailable("connectedSMs",         &connectedSMs_);
+  is->fireItemAvailable("collateDQM",           &collateDQM_);
+  is->fireItemAvailable("purgeTimeDQM",         &purgeTimeDQM_);
+  is->fireItemAvailable("readyTimeDQM",         &readyTimeDQM_);
+  is->fireItemAvailable("filePrefixDQM",        &filePrefixDQM_);
   //is->fireItemAvailable("nLogicalDisk",         &nLogicalDisk_);
   //is->fireItemAvailable("fileCatalog",          &fileCatalog_);
   is->fireItemAvailable("maxESEventRate",       &maxESEventRate_);
@@ -1335,6 +1352,10 @@ void SMProxyServer::setupFlashList()
   is->addItemRetrieveListener("stateName",            this);
   is->addItemRetrieveListener("progressMarker",       this);
   is->addItemRetrieveListener("connectedSMs",         this);
+  is->addItemRetrieveListener("collateDQM",           this);
+  is->addItemRetrieveListener("purgeTimeDQM",         this);
+  is->addItemRetrieveListener("readyTimeDQM",         this);
+  is->addItemRetrieveListener("filePrefixDQM",        this);
   //is->addItemRetrieveListener("nLogicalDisk",         this);
   //is->addItemRetrieveListener("fileCatalog",          this);
   is->addItemRetrieveListener("maxESEventRate",       this);
@@ -1403,6 +1424,11 @@ bool SMProxyServer::configuring(toolbox::task::WorkLoop* wl)
         DQMeventServer(new DQMEventServer(DQMmaxESEventRate_));
       dpm_->setDQMEventServer(DQMeventServer);
 
+      dpm_->setCollateDQM(collateDQM_);
+      dpm_->setPurgeTimeDQM(purgeTimeDQM_);
+      dpm_->setReadyTimeDQM(readyTimeDQM_);
+      dpm_->setFilePrefixDQM(filePrefixDQM_);
+
       // If we are in pull mode, we need to know which Storage Managers to
       // poll for events and DQM events
       // Only add the StorageManager URLs at this configuration stage
@@ -1467,6 +1493,7 @@ bool SMProxyServer::enabling(toolbox::task::WorkLoop* wl)
     sentDQMEvents_   = 0;
     receivedEvents_ = 0;
     receivedDQMEvents_ = 0;
+    // need this to register, get header and if we pull (poll) for events
     dpm_->start();
 
     LOG4CPLUS_INFO(getApplicationLogger(),"Finished enabling!");
@@ -1487,7 +1514,27 @@ bool SMProxyServer::stopping(toolbox::task::WorkLoop* wl)
   try {
     LOG4CPLUS_INFO(getApplicationLogger(),"Start stopping :) ...");
 
-    // Not doing anything yet
+    // only write out DQM data if needed
+    boost::shared_ptr<stor::DQMServiceManager> dqmManager;
+    if (dpm_.get() != NULL)
+    {
+      dqmManager = dpm_->getDQMServiceManager();
+      if(dqmManager.get() != NULL) {
+        dqmManager->stop();
+      }
+    }
+    // clear out events from queues
+    boost::shared_ptr<EventServer> eventServer;
+    boost::shared_ptr<DQMEventServer> dqmeventServer;
+    if (dpm_.get() != NULL)
+    {
+      eventServer = dpm_->getEventServer();
+      dqmeventServer = dpm_->getDQMEventServer();
+    }
+    if (eventServer.get() != NULL) eventServer->clearQueue();
+    if (dqmeventServer.get() != NULL) dqmeventServer->clearQueue();
+    // do not stop dpm_ as we don't want to register again and get the header again
+    // need to redo if we switch to polling for events
 
     LOG4CPLUS_INFO(getApplicationLogger(),"Finished stopping!");
     

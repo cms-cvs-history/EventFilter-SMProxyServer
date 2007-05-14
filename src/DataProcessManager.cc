@@ -1,4 +1,4 @@
-// $Id: DataProcessManager.cc,v 1.1 2007/04/26 00:54:53 hcheung Exp $
+// $Id: DataProcessManager.cc,v 1.1.2.1 2007/04/29 18:19:56 hcheung Exp $
 
 #include "EventFilter/SMProxyServer/interface/DataProcessManager.h"
 #include "EventFilter/StorageManager/interface/SMCurlInterface.h"
@@ -43,7 +43,8 @@ namespace stor
     ser_prods_size_(0),
     serialized_prods_(1000000),
     buf_(2000),
-    headerRetryInterval_(5)
+    headerRetryInterval_(5),
+    dqmServiceManager_(new stor::DQMServiceManager())
   {
     init();
   } 

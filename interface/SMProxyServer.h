@@ -12,7 +12,7 @@
 
      See CMS EventFilter wiki page for further notes.
 
-   $Id: SMProxyServer.h,v 1.1 2007/04/26 00:54:52 hcheung Exp $
+   $Id: SMProxyServer.h,v 1.1.2.1 2007/04/29 18:19:55 hcheung Exp $
 */
 
 #include <string>
@@ -123,6 +123,11 @@ namespace stor {
 
     //std::string smFileCatalog_;
 
+    xdata::Boolean collateDQM_;
+    xdata::String  filePrefixDQM_;
+    xdata::Integer purgeTimeDQM_;
+    xdata::Integer readyTimeDQM_;
+
     evf::Css css_;
     xdata::UnsignedInteger32 receivedEvents_;
     xdata::UnsignedInteger32 receivedDQMEvents_;
@@ -152,8 +157,6 @@ namespace stor {
     //xdata::Vector<xdata::String> fileList_;
     //xdata::Vector<xdata::UnsignedInteger32> eventsInFile_;
     //xdata::Vector<xdata::UnsignedInteger32> fileSize_;
-
-    xdata::UnsignedInteger32 curlTimeout_;
 
     // *** for performance measurements
     void addMeasurement(unsigned long size);
@@ -194,6 +197,11 @@ namespace stor {
     xdata::Double            storedVolume_;
     xdata::UnsignedInteger32 memoryUsed_;
     xdata::String            progressMarker_;
+    enum
+    {
+      DEFAULT_PURGE_TIME = 20,
+      DEFAULT_READY_TIME = 10
+    };
   }; 
 } 
 
