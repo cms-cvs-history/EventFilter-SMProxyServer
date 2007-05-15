@@ -1,6 +1,6 @@
 #ifndef SMPS_DATA_PROCESS_MANAGER_HPP
 #define SMPS_DATA_PROCESS_MANAGER_HPP
-// $Id: DataProcessManager.h,v 1.1 2007/04/26 00:54:52 hcheung Exp $
+// $Id: DataProcessManager.h,v 1.1.2.1 2007/05/14 19:27:38 hcheung Exp $
 
 #include "EventFilter/StorageManager/interface/EventServer.h"
 #include "EventFilter/StorageManager/interface/DQMEventServer.h"
@@ -43,6 +43,9 @@ namespace stor
     void setCollateDQM(bool collateDQM)
     { dqmServiceManager_->setCollateDQM(collateDQM); }
 
+    void setArchiveDQM(bool archiveDQM)
+    { dqmServiceManager_->setArchiveDQM(archiveDQM); }
+
     void setPurgeTimeDQM(int purgeTimeDQM)
     { dqmServiceManager_->setPurgeTime(purgeTimeDQM);}
 
@@ -51,6 +54,12 @@ namespace stor
 
     void setFilePrefixDQM(std::string filePrefixDQM)
     { dqmServiceManager_->setFilePrefix(filePrefixDQM);}
+
+    void setUseCompressionDQM(bool useCompressionDQM)
+    { dqmServiceManager_->setUseCompression(useCompressionDQM);}
+
+    void setCompressionLevelDQM(int compressionLevelDQM)
+    { dqmServiceManager_->setCompressionLevel(compressionLevelDQM);}
 
     void setDQMEventServer(boost::shared_ptr<DQMEventServer>& es)
     {
@@ -89,6 +98,7 @@ namespace stor
 
     edm::EventBuffer* cmd_q_;
 
+    bool alreadyRegistered_;
     unsigned int  ser_prods_size_;
     std::vector<unsigned char> serialized_prods_;
     std::vector<unsigned char> buf_;

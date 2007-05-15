@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.1.2.1 2007/04/29 18:19:56 hcheung Exp $
+// $Id: SMProxyServer.cc,v 1.1.2.2 2007/05/14 19:27:39 hcheung Exp $
 
 #include <iostream>
 #include <iomanip>
@@ -48,9 +48,12 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
   fsm_(this), 
   ah_(0), 
   collateDQM_(false),
+  archiveDQM_(false),
   filePrefixDQM_("/tmp/DQM"),
   purgeTimeDQM_(DEFAULT_PURGE_TIME),
   readyTimeDQM_(DEFAULT_READY_TIME),
+  useCompressionDQM_(true),
+  compressionLevelDQM_(1),
   receivedEvents_(0),
   receivedDQMEvents_(0),
   mybuffer_(7000000),
@@ -97,9 +100,12 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
   xgi::bind(this,&SMProxyServer::receiveDQMEventWebPage,  "pushDQMEventData");
 
   ispace->fireItemAvailable("collateDQM",     &collateDQM_);
+  ispace->fireItemAvailable("archiveDQM",     &archiveDQM_);
   ispace->fireItemAvailable("purgeTimeDQM",   &purgeTimeDQM_);
   ispace->fireItemAvailable("readyTimeDQM",   &readyTimeDQM_);
   ispace->fireItemAvailable("filePrefixDQM",  &filePrefixDQM_);
+  ispace->fireItemAvailable("useCompressionDQM",  &useCompressionDQM_);
+  ispace->fireItemAvailable("compressionLevelDQM",  &compressionLevelDQM_);
   //nLogicalDisk_   = 0;
 
   //ispace->fireItemAvailable("nLogicalDisk", &nLogicalDisk_);
@@ -1317,9 +1323,12 @@ void SMProxyServer::setupFlashList()
   is->fireItemAvailable("progressMarker",       &progressMarker_);
   is->fireItemAvailable("connectedSMs",         &connectedSMs_);
   is->fireItemAvailable("collateDQM",           &collateDQM_);
+  is->fireItemAvailable("archiveDQM",           &archiveDQM_);
   is->fireItemAvailable("purgeTimeDQM",         &purgeTimeDQM_);
   is->fireItemAvailable("readyTimeDQM",         &readyTimeDQM_);
   is->fireItemAvailable("filePrefixDQM",        &filePrefixDQM_);
+  is->fireItemAvailable("useCompressionDQM",    &useCompressionDQM_);
+  is->fireItemAvailable("compressionLevelDQM",  &compressionLevelDQM_);
   //is->fireItemAvailable("nLogicalDisk",         &nLogicalDisk_);
   //is->fireItemAvailable("fileCatalog",          &fileCatalog_);
   is->fireItemAvailable("maxESEventRate",       &maxESEventRate_);
@@ -1353,9 +1362,12 @@ void SMProxyServer::setupFlashList()
   is->addItemRetrieveListener("progressMarker",       this);
   is->addItemRetrieveListener("connectedSMs",         this);
   is->addItemRetrieveListener("collateDQM",           this);
+  is->addItemRetrieveListener("archiveDQM",           this);
   is->addItemRetrieveListener("purgeTimeDQM",         this);
   is->addItemRetrieveListener("readyTimeDQM",         this);
   is->addItemRetrieveListener("filePrefixDQM",        this);
+  is->addItemRetrieveListener("useCompressionDQM",    this);
+  is->addItemRetrieveListener("compressionLevelDQM",  this);
   //is->addItemRetrieveListener("nLogicalDisk",         this);
   //is->addItemRetrieveListener("fileCatalog",          this);
   is->addItemRetrieveListener("maxESEventRate",       this);
@@ -1407,7 +1419,7 @@ bool SMProxyServer::configuring(toolbox::task::WorkLoop* wl)
       consumerQueueSize_ = cutoff;
     if (DQMconsumerQueueSize_ < cutoff)
       DQMconsumerQueueSize_ = cutoff;
-    
+
     // set the urn as the consumer name to register with to SM
     std::string url = getApplicationDescriptor()->getContextDescriptor()->getURL();
     std::string urn = getApplicationDescriptor()->getURN();
@@ -1425,9 +1437,12 @@ bool SMProxyServer::configuring(toolbox::task::WorkLoop* wl)
       dpm_->setDQMEventServer(DQMeventServer);
 
       dpm_->setCollateDQM(collateDQM_);
+      dpm_->setArchiveDQM(archiveDQM_);
       dpm_->setPurgeTimeDQM(purgeTimeDQM_);
       dpm_->setReadyTimeDQM(readyTimeDQM_);
       dpm_->setFilePrefixDQM(filePrefixDQM_);
+      dpm_->setUseCompressionDQM(useCompressionDQM_);
+      dpm_->setCompressionLevelDQM(compressionLevelDQM_);
 
       // If we are in pull mode, we need to know which Storage Managers to
       // poll for events and DQM events
@@ -1535,6 +1550,9 @@ bool SMProxyServer::stopping(toolbox::task::WorkLoop* wl)
     if (dqmeventServer.get() != NULL) dqmeventServer->clearQueue();
     // do not stop dpm_ as we don't want to register again and get the header again
     // need to redo if we switch to polling for events
+
+    // should tell StorageManager applications we are stopping in which
+    // case we need to register again
 
     LOG4CPLUS_INFO(getApplicationLogger(),"Finished stopping!");
     

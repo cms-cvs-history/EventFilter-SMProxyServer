@@ -1,4 +1,4 @@
-// $Id: DataProcessManager.cc,v 1.1.2.1 2007/04/29 18:19:56 hcheung Exp $
+// $Id: DataProcessManager.cc,v 1.1.2.2 2007/05/14 19:27:39 hcheung Exp $
 
 #include "EventFilter/SMProxyServer/interface/DataProcessManager.h"
 #include "EventFilter/StorageManager/interface/SMCurlInterface.h"
@@ -40,6 +40,7 @@ namespace stor
 
   DataProcessManager::DataProcessManager():
     cmd_q_(edm::getEventBuffer(voidptr_size,50)),
+    alreadyRegistered_(false),
     ser_prods_size_(0),
     serialized_prods_(1000000),
     buf_(2000),
@@ -58,6 +59,8 @@ namespace stor
     consumerPriority_ = "SMProxyServer";
     DQMconsumerName_ = "Unknown";
     DQMconsumerPriority_ =  "SMProxyServer";
+
+    alreadyRegistered_ = false;
 
     edm::ParameterSet ps = ParameterSet();
     consumerPSetString_ = ps.toString();
@@ -99,41 +102,48 @@ namespace stor
     // first register with the SM for each subfarm
     // TODO to use non-blocking command queue method to process
     // stop commands while in registration loop: possible with tag in 15x series
-    bool doneWithRegistration = false;
-    unsigned int count = 0; // keep of count of tries and quite after 5
-    while(!doneWithRegistration && (count < 5))
-    {
-      bool success = registerWithAllSM();
-      if(success) doneWithRegistration = true;
-      else waitBetweenRegTrys();
-      ++count;
+    // using hack where we do not register again after a stopAction()
+    if(!alreadyRegistered_) {
+      bool doneWithRegistration = false;
+      unsigned int count = 0; // keep of count of tries and quite after 5
+      while(!doneWithRegistration && (count < 5))
+      {
+        bool success = registerWithAllSM();
+        if(success) doneWithRegistration = true;
+        else waitBetweenRegTrys();
+        ++count;
+      }
+      if(count >= 5) edm::LogInfo("processCommands") << "Could not register with all SM Servers";
+      else edm::LogInfo("processCommands") << "Registered with all SM Event Servers";
+      // now register as DQM consumers
+      doneWithRegistration = false;
+      count = 0;
+      while(!doneWithRegistration && (count < 5))
+      {
+        bool success = registerWithAllDQMSM();
+        if(success) doneWithRegistration = true;
+        else waitBetweenRegTrys();
+        ++count;
+      }
+      if(count >= 5) edm::LogInfo("processCommands") << "Could not register with all SM DQMEvent Servers";
+      else edm::LogInfo("processCommands") << "Registered with all SM DQMEvent Servers";
+      // now get one INIT header (product registry) and save it
+      bool gotOneHeader = false;
+      count = 0;
+      while(!gotOneHeader && (count < 5))
+      {
+        bool success = getAnyHeaderFromSM();
+        if(success) gotOneHeader = true;
+        else waitBetweenRegTrys();
+        ++count;
+      }
+      if(count >= 5) edm::LogInfo("processCommands") << "Could not get product registry!";
+      else edm::LogInfo("processCommands") << "Got the product registry";
+
+      alreadyRegistered_ = true;
+    } else {
+      edm::LogInfo("processCommands") << "Reusing SM registration from previous run";
     }
-    if(count >= 5) edm::LogInfo("processCommands") << "Could not register with all SM Servers";
-    else edm::LogInfo("processCommands") << "Registered with all SM Event Servers";
-    // now register as DQM consumers
-    doneWithRegistration = false;
-    count = 0;
-    while(!doneWithRegistration && (count < 5))
-    {
-      bool success = registerWithAllDQMSM();
-      if(success) doneWithRegistration = true;
-      else waitBetweenRegTrys();
-      ++count;
-    }
-    if(count >= 5) edm::LogInfo("processCommands") << "Could not register with all SM DQMEvent Servers";
-    else edm::LogInfo("processCommands") << "Registered with all SM DQMEvent Servers";
-    // now get one INIT header (product registry) and save it
-    bool gotOneHeader = false;
-    count = 0;
-    while(!gotOneHeader && (count < 5))
-    {
-      bool success = getAnyHeaderFromSM();
-      if(success) gotOneHeader = true;
-      else waitBetweenRegTrys();
-      ++count;
-    }
-    if(count >= 5) edm::LogInfo("processCommands") << "Could not get product registry!";
-    else edm::LogInfo("processCommands") << "Got the product registry";
 
     // just wait for command messages now
     while(1)

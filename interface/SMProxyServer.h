@@ -12,7 +12,7 @@
 
      See CMS EventFilter wiki page for further notes.
 
-   $Id: SMProxyServer.h,v 1.1.2.1 2007/04/29 18:19:55 hcheung Exp $
+   $Id: SMProxyServer.h,v 1.1.2.2 2007/05/14 19:27:38 hcheung Exp $
 */
 
 #include <string>
@@ -124,9 +124,12 @@ namespace stor {
     //std::string smFileCatalog_;
 
     xdata::Boolean collateDQM_;
+    xdata::Boolean archiveDQM_;
     xdata::String  filePrefixDQM_;
     xdata::Integer purgeTimeDQM_;
     xdata::Integer readyTimeDQM_;
+    xdata::Boolean useCompressionDQM_;
+    xdata::Integer compressionLevelDQM_;
 
     evf::Css css_;
     xdata::UnsignedInteger32 receivedEvents_;
