@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.1.2.2 2007/05/14 19:27:39 hcheung Exp $
+// $Id: SMProxyServer.cc,v 1.1.2.3 2007/05/15 01:27:38 hcheung Exp $
 
 #include <iostream>
 #include <iomanip>
@@ -34,9 +34,9 @@
 
 #include "xgi/Method.h"
 
-#include "xoap/include/xoap/SOAPEnvelope.h"
-#include "xoap/include/xoap/SOAPBody.h"
-#include "xoap/include/xoap/domutils.h"
+#include "xoap/SOAPEnvelope.h"
+#include "xoap/SOAPBody.h"
+#include "xoap/domutils.h"
 
 using namespace edm;
 using namespace std;
