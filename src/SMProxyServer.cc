@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.14 2008/04/16 16:19:05 biery Exp $
+// $Id: SMProxyServer.cc,v 1.15 2008/04/16 18:25:19 biery Exp $
 
 #include <iostream>
 #include <iomanip>
@@ -128,13 +128,13 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
   // added for Event Server
   maxESEventRate_ = 10.0;  // hertz
   ispace->fireItemAvailable("maxESEventRate",&maxESEventRate_);
-  maxESDataRate_ = 100.0;  // MB/sec
+  maxESDataRate_ = 2048.0;  // MB/sec
   ispace->fireItemAvailable("maxESDataRate",&maxESDataRate_);
   maxEventRequestRate_ = 10.0;  // hertz
   ispace->fireItemAvailable("maxEventRequestRate",&maxEventRequestRate_);
-  activeConsumerTimeout_ = 300;  // seconds
+  activeConsumerTimeout_ = 60;  // seconds
   ispace->fireItemAvailable("activeConsumerTimeout",&activeConsumerTimeout_);
-  idleConsumerTimeout_ = 600;  // seconds
+  idleConsumerTimeout_ = 60;  // seconds
   ispace->fireItemAvailable("idleConsumerTimeout",&idleConsumerTimeout_);
   consumerQueueSize_ = 10;
   ispace->fireItemAvailable("consumerQueueSize",&consumerQueueSize_);
@@ -176,12 +176,14 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
   outpmeter_->init(samples_);
 
   //string        xmlClass = getApplicationDescriptor()->getClassName();
-  //unsigned long instance = getApplicationDescriptor()->getInstance();
+  unsigned long instance = getApplicationDescriptor()->getInstance();
   //ostringstream sourcename;
   // sourcename << xmlClass << "_" << instance;
   //sourcename << instance;
   //sourceId_ = sourcename.str();
   //smParameter_ -> setSmInstance(sourceId_);  // sourceId_ can be removed ...
+
+  ConsumerPipe::setIdOffset(1000 * instance);
 
   // Need this to deserialize the streamer data
   edm::RootAutoLibraryLoader::enable();
@@ -1066,6 +1068,7 @@ void SMProxyServer::consumerWebPage(xgi::Input *in, xgi::Output *out)
                                modifiedRequest, maxEventRequestRate,
                                consumerHost, consumerQueueSize_));
     eventServer->addConsumer(consPtr);
+    dpm_->addLocalConsumer(consPtr);
 
     // build the registration response into the message buffer
     ConsRegResponseBuilder respMsg(msgBuff, BUFFER_SIZE,
@@ -1989,6 +1992,104 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
 
         *out << "</table>" << std::endl;
       }
+
+      // ************************************************************
+      // * HTTP POST timing
+      // ************************************************************
+      *out << "<h3>HTTP Timing:</h3>" << std::endl;
+      *out << "<h4>Event Retrieval from Storage Manager(s):</h4>"
+           << std::endl;
+      *out << "<table border=\"1\" width=\"100%\">" << std::endl;
+      *out << "<tr>" << std::endl;
+      *out << "  <th>&nbsp;</th>" << std::endl;
+      *out << "  <th>Average Time per<br/>Request (sec)</th>" << std::endl;
+      *out << "  <th>Number of<br/>Requests</th>" << std::endl;
+      *out << "  <th>Measurement<br/>Duration (sec)</th>" << std::endl;
+      *out << "</tr>" << std::endl;
+      *out << "<tr>" << std::endl;
+      *out << "  <td align=\"center\">Recent Results</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getAverageValue(DataProcessManager::SHORT_TERM,
+                                    DataProcessManager::EVENT_FETCH,
+                                    now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getSampleCount(DataProcessManager::SHORT_TERM,
+                                   DataProcessManager::EVENT_FETCH,
+                                   now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getDuration(DataProcessManager::SHORT_TERM,
+                                DataProcessManager::EVENT_FETCH,
+                                now)
+           << "</td>" << std::endl;
+      *out << "</tr>" << std::endl;
+      *out << "<tr>" << std::endl;
+      *out << "  <td align=\"center\">Full Results</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getAverageValue(DataProcessManager::LONG_TERM,
+                                    DataProcessManager::EVENT_FETCH,
+                                    now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getSampleCount(DataProcessManager::LONG_TERM,
+                                   DataProcessManager::EVENT_FETCH,
+                                   now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getDuration(DataProcessManager::LONG_TERM,
+                                DataProcessManager::EVENT_FETCH,
+                                now)
+           << "</td>" << std::endl;
+      *out << "</tr>" << std::endl;
+      *out << "</table>" << std::endl;
+
+      *out << "<h4>DQM Event Retrieval from Storage Manager(s):</h4>"
+           << std::endl;
+      *out << "<table border=\"1\" width=\"100%\">" << std::endl;
+      *out << "<tr>" << std::endl;
+      *out << "  <th>&nbsp;</th>" << std::endl;
+      *out << "  <th>Average Time per<br/>Request (sec)</th>" << std::endl;
+      *out << "  <th>Number of<br/>Requests</th>" << std::endl;
+      *out << "  <th>Measurement<br/>Duration (sec)</th>" << std::endl;
+      *out << "</tr>" << std::endl;
+      *out << "<tr>" << std::endl;
+      *out << "  <td align=\"center\">Recent Results</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getAverageValue(DataProcessManager::SHORT_TERM,
+                                    DataProcessManager::DQMEVENT_FETCH,
+                                    now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getSampleCount(DataProcessManager::SHORT_TERM,
+                                   DataProcessManager::DQMEVENT_FETCH,
+                                   now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getDuration(DataProcessManager::SHORT_TERM,
+                                DataProcessManager::DQMEVENT_FETCH,
+                                now)
+           << "</td>" << std::endl;
+      *out << "</tr>" << std::endl;
+      *out << "<tr>" << std::endl;
+      *out << "  <td align=\"center\">Full Results</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getAverageValue(DataProcessManager::LONG_TERM,
+                                    DataProcessManager::DQMEVENT_FETCH,
+                                    now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getSampleCount(DataProcessManager::LONG_TERM,
+                                   DataProcessManager::DQMEVENT_FETCH,
+                                   now)
+           << "</td>" << std::endl;
+      *out << "  <td align=\"center\">"
+           << dpm_->getDuration(DataProcessManager::LONG_TERM,
+                                DataProcessManager::DQMEVENT_FETCH,
+                                now)
+           << "</td>" << std::endl;
+      *out << "</tr>" << std::endl;
+      *out << "</table>" << std::endl;
     }
     else
     {

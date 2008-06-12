@@ -1,7 +1,8 @@
-// $Id: DataProcessManager.cc,v 1.9 2008/03/03 20:38:11 biery Exp $
+// $Id: DataProcessManager.cc,v 1.10 2008/04/16 16:43:13 biery Exp $
 
 #include "EventFilter/SMProxyServer/interface/DataProcessManager.h"
 #include "EventFilter/StorageManager/interface/SMCurlInterface.h"
+#include "EventFilter/StorageManager/interface/ConsumerPipe.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/DebugMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -10,6 +11,7 @@
 #include "IOPool/Streamer/interface/ConsRegMessage.h"
 
 #include "boost/bind.hpp"
+#include "boost/lexical_cast.hpp"
 
 #include "curl/curl.h"
 #include <wait.h>
@@ -57,15 +59,20 @@ namespace stor
     eventpage_ = "/geteventdata";
     DQMeventpage_ = "/getDQMeventdata";
     headerpage_ = "/getregdata";
-    consumerName_ = stor::PROXY_SERVER_NAME;
+    consumerName_ = ConsumerPipe::PROXY_SERVER_NAME;
     //consumerPriority_ = "PushMode"; // this means push mode!
     consumerPriority_ = "Normal";
-    DQMconsumerName_ = stor::PROXY_SERVER_NAME;
+    DQMconsumerName_ = ConsumerPipe::PROXY_SERVER_NAME;
     //DQMconsumerPriority_ =  "PushMode"; // this means push mode!
     DQMconsumerPriority_ =  "Normal";
 
-    const double MAX_REQUEST_INTERVAL = 300.0;  // seconds
     double maxEventRequestRate = 10.0; // just a default until set in config action
+    // over-ride the max rate (greatly reducing it) since we now
+    // only use a direct request from the proxy server as a keep-alive
+    // (no events flow through that link)
+    maxEventRequestRate /= 100.0;
+
+    const double MAX_REQUEST_INTERVAL = 60.0;  // seconds
     if (maxEventRequestRate < (1.0 / MAX_REQUEST_INTERVAL)) {
       minEventRequestInterval_ = MAX_REQUEST_INTERVAL;
     }
@@ -74,13 +81,14 @@ namespace stor
     }
     consumerId_ = (time(0) & 0xffffff);  // temporary - will get from ES later
 
-    //double maxEventRequestRate = pset.getUntrackedParameter<double>("maxDQMEventRequestRate",1.0);
-    maxEventRequestRate = 0.2; // TODO fixme: set this in the XML
-    if (maxEventRequestRate < (1.0 / MAX_REQUEST_INTERVAL)) {
-      minDQMEventRequestInterval_ = MAX_REQUEST_INTERVAL;
+    //double maxDQMRequestRate = pset.getUntrackedParameter<double>("maxDQMEventRequestRate",1.0);
+    double maxDQMRequestRate = 10.0; // TODO fixme: set this in the XML
+    const double MAX_DQM_REQUEST_INTERVAL = 300.0;  // seconds
+    if (maxDQMRequestRate < (1.0 / MAX_DQM_REQUEST_INTERVAL)) {
+      minDQMEventRequestInterval_ = MAX_DQM_REQUEST_INTERVAL;
     }
     else {
-      minDQMEventRequestInterval_ = 1.0 / maxEventRequestRate;  // seconds
+      minDQMEventRequestInterval_ = 1.0 / maxDQMRequestRate;  // seconds
     }
     DQMconsumerId_ = (time(0) & 0xffffff);  // temporary - will get from ES later
 
@@ -107,12 +115,31 @@ namespace stor
     receivedDQMEvents_ = 0;
     pmeter_->init(samples_);
     stats_.fullReset();
+
+    // make an entry in the consumerMap for ourself (with a special consumerID)
+    boost::shared_ptr<ConsumerProxyInfo>
+      infoPtr(new ConsumerProxyInfo(ConsumerPipe::NULL_CONSUMER_ID,
+                                    (1.0 / minEventRequestInterval_),
+                                    smList_, 1024, 1024));
+    consumerMap_[ConsumerPipe::NULL_CONSUMER_ID] = infoPtr;
+
+    // initialize the counters that we use for statistics
+    ltEventFetchTimeCounter_.reset(new ForeverCounter());
+    stEventFetchTimeCounter_.reset(new RollingIntervalCounter(180,5,20));
+    ltDQMFetchTimeCounter_.reset(new ForeverCounter());
+    stDQMFetchTimeCounter_.reset(new RollingIntervalCounter(180,5,20));
   }
 
   void DataProcessManager::setMaxEventRequestRate(double rate)
   {
-    const double MAX_REQUEST_INTERVAL = 300.0;  // seconds
     if(rate <= 0.0) return; // TODO make sure config is checked!
+
+    // over-ride the input rate (greatly reducing it) since we now
+    // only use a direct request from the proxy server as a keep-alive
+    // (no events flow through that link)
+    rate /= 100.0;
+
+    const double MAX_REQUEST_INTERVAL = 60.0;  // seconds
     if (rate < (1.0 / MAX_REQUEST_INTERVAL)) {
       minEventRequestInterval_ = MAX_REQUEST_INTERVAL;
     }
@@ -120,12 +147,17 @@ namespace stor
       minEventRequestInterval_ = 1.0 / rate;  // seconds
     }
 
+    // update the rate stored in the proxy server's ConsumerProxyInfo
+    boost::shared_ptr<ConsumerProxyInfo> infoPtr =
+      consumerMap_[ConsumerPipe::NULL_CONSUMER_ID];
+    infoPtr->updateRateRequest(1.0 / minEventRequestInterval_);
+
     // 16-Apr-2008, KAB: set maxEventRequestRate in the parameterSet that
     // we send to the storage manager now that we have the fair share
     // algorithm working in the SM.
     edm::ParameterSet ps = ParameterSet();
     Entry maxRateEntry("maxEventRequestRate",
-                       static_cast<double>(1.0 / minEventRequestInterval_),
+                       (1.0 / minEventRequestInterval_),
                        false);
     ps.insert(true, "maxEventRequestRate", maxRateEntry);
     consumerPSetString_ = ps.toString();
@@ -172,6 +204,13 @@ namespace stor
     if(me_) me_->join();
   }
 
+  void DataProcessManager::debugOutput(std::string text)
+  {
+    char nowString[32];
+    sprintf(nowString, "%16.4f", BaseCounter::getCurrentTime());
+    std::cout << "*** " << nowString << " " << text << std::endl;
+  }
+
   void DataProcessManager::processCommands()
   {
     // called with this data process manager's own thread.
@@ -189,6 +228,7 @@ namespace stor
     unsigned int countINIT = 0; // keep of count of tries and quit after 255
     bool alreadysaidINIT = false;
 
+    std::string workString;
     bool DoneWithJob = false;
     while(!DoneWithJob)
     {
@@ -201,12 +241,25 @@ namespace stor
       }
       // register as event consumer to all SM senders
       if(!alreadyRegistered_) {
+        debugOutput("Not already registered");
         if(!doneWithRegistration)
         {
+          debugOutput("Before reg wait");
           waitBetweenRegTrys();
-          bool success = registerWithAllSM();
+          debugOutput("After reg wait");
+          bool success = registerWithAllSM(ConsumerPipe::NULL_CONSUMER_ID);
           if(success) doneWithRegistration = true;
           ++count;
+          workString = "After registerWithAllSM, success = ";
+          try {
+            workString.append(boost::lexical_cast<std::string>(success));
+            workString.append(", count = ");
+            workString.append(boost::lexical_cast<std::string>(count));
+          }
+          catch (boost::bad_lexical_cast& blcExcpt) {
+            workString.append("???");
+          }
+          debugOutput(workString);
         }
         // TODO fixme: decide what to do after max tries
         if(count >= maxcount) edm::LogInfo("processCommands") << "Could not register with all SM Servers"
@@ -240,10 +293,22 @@ namespace stor
       // TODO fixme: use the data member for got header to go across runs
       if(!gotOneHeader)
       {
+        debugOutput("Before header wait");
         waitBetweenRegTrys();
-        bool success = getAnyHeaderFromSM();
+        debugOutput("After header wait");
+        bool success = getAnyHeaderFromSM(ConsumerPipe::NULL_CONSUMER_ID);
         if(success) gotOneHeader = true;
         ++countINIT;
+        workString = "After getAnyHeaderFromSM, success = ";
+        try {
+          workString.append(boost::lexical_cast<std::string>(success));
+          workString.append(", count = ");
+          workString.append(boost::lexical_cast<std::string>(countINIT));
+        }
+        catch (boost::bad_lexical_cast& blcExcpt) {
+          workString.append("???");
+        }
+        debugOutput(workString);
       }
       if(countINIT >= maxcount) edm::LogInfo("processCommands") << "Could not get product registry!"
           << " after " << maxcount << " tries";
@@ -252,10 +317,209 @@ namespace stor
         alreadysaidINIT = true;
       }
       if(alreadyRegistered_ && gotOneHeader && haveHeader()) {
-        getEventFromAllSM();
+
+        // loop over all consumers to check if they need registration,
+        // headers, or events (including the special NULL_CONSUMER_ID
+        // consumer that we use to send keep-alive requests to the SM)
+        std::vector<uint32> disconnectedList;
+        double time2wait = 0.0;
+        double sleepTime = static_cast<double>(headerRetryInterval_);
+        ConsumerInfo_map::const_iterator infoIter;
+        for (infoIter = consumerMap_.begin();
+             infoIter != consumerMap_.end();
+             ++infoIter) {
+          unsigned int localConsumerId = infoIter->first;
+          boost::shared_ptr<ConsumerProxyInfo> infoPtr = infoIter->second;
+          //workString = "Consumer ";
+          //try {
+          //  workString.append(boost::lexical_cast<std::string>(localConsumerId));
+          //}
+          //catch (boost::bad_lexical_cast& blcExcpt) {
+          //  workString.append("??? (1)");
+          //}
+          //debugOutput(workString);
+
+          // first, check if the consumer is still active.  If idle,
+          // move on to next consumer; if disconnected, add it to a list
+          // for later removal and go to next consumer.
+          // (Only check downstream consumers, not ourself!)
+          if (localConsumerId != ConsumerPipe::NULL_CONSUMER_ID) {
+            boost::shared_ptr<ConsumerPipe> consPtr =
+              eventServer_->getConsumer(localConsumerId);
+            if (consPtr.get() == NULL) {
+              workString = "Consumer ";
+              try {
+                workString.append(boost::lexical_cast<std::string>(localConsumerId));
+                workString.append(" is disconnected");
+              }
+              catch (boost::bad_lexical_cast& blcExcpt) {
+                workString.append("??? (2)");
+              }
+              debugOutput(workString);
+              disconnectedList.push_back(localConsumerId);
+              continue;
+            }
+            else if (! consPtr->isActive()) {
+              workString = "Consumer ";
+              try {
+                workString.append(boost::lexical_cast<std::string>(localConsumerId));
+                workString.append(" is inactive");
+              }
+              catch (boost::bad_lexical_cast& blcExcpt) {
+                workString.append("??? (3)");
+              }
+              debugOutput(workString);
+              continue;
+            }
+          }
+
+          // check if the consumer needs to register with one or more SMs;
+          // if so, do that first
+          if (infoPtr->needsRegistration()) {
+            bool fullSuccess = registerWithAllSM(localConsumerId);
+            workString = "Consumer ";
+            try {
+              workString.append(boost::lexical_cast<std::string>(localConsumerId));
+              workString.append(" registration status = ");
+              workString.append(boost::lexical_cast<std::string>(fullSuccess));
+            }
+            catch (boost::bad_lexical_cast& blcExcpt) {
+              workString.append("??? (4)");
+            }
+            debugOutput(workString);
+            // if we didn't succeed in registering with all SMs, assume
+            // that we may need to sleep a bit between loops
+            if (! fullSuccess) {
+              time2wait = static_cast<double>(headerRetryInterval_); 
+              if (time2wait < sleepTime && time2wait >= 0.0) {
+                sleepTime = time2wait;
+              }
+            }
+          }
+
+          // check if the consumer needs headers and if it is ready to
+          // to fetch them.  (Note that headers might be fetched
+          // from a subset of SMs even if we haven't registered with all
+          // SMs.  Those with registrations are queried for the header.)
+          if (infoPtr->needsHeaders() && infoPtr->isReadyForHeaders()) {
+            bool fullSuccess = getAnyHeaderFromSM(localConsumerId);
+            workString = "Consumer ";
+            try {
+              workString.append(boost::lexical_cast<std::string>(localConsumerId));
+              workString.append(" header status = ");
+              workString.append(boost::lexical_cast<std::string>(fullSuccess));
+            }
+            catch (boost::bad_lexical_cast& blcExcpt) {
+              workString.append("??? (5)");
+            }
+            debugOutput(workString);
+            // if we didn't succeed in fetching headers from all SMs, assume
+            // that we may need to sleep a bit between loops
+            if (! fullSuccess) {
+              time2wait = static_cast<double>(headerRetryInterval_); 
+              if (time2wait < sleepTime && time2wait >= 0.0) {
+                sleepTime = time2wait;
+              }
+            }
+          }
+
+          // check if the consumer is ready for events (in general)
+          if (infoPtr->isReadyForEvents()) {
+
+            // check if the consumer is ready for the next event
+            time2wait = infoPtr->getTimeToWaitForEvent();
+            //workString = "Consumer ";
+            //try {
+            //  workString.append(boost::lexical_cast<std::string>(localConsumerId));
+            //  workString.append(" initial time to wait = ");
+            //  workString.append(boost::lexical_cast<std::string>(time2wait));
+            //}
+            //catch (boost::bad_lexical_cast& blcExcpt) {
+            //  workString.append("??? (6)");
+            //}
+            //debugOutput(workString);
+            if (time2wait <= 0.0) {
+
+              // fetch an event from the next available SM
+              // If that succeeds, we stop, for now.
+              // If that fails, we try a different SM until we run out of SMs
+              bool keepTrying = true;
+              while (keepTrying) {
+
+                // fetch the next SM (and remote consumer ID) from the
+                // ConsumerProxyInfo object
+                std::pair<std::string, unsigned int> smPair =
+                  infoPtr->getNextSMForEvent();
+                std::string smURL = smPair.first;
+                uint32 remoteConsumerId = smPair.second;
+
+                // if we've exhausted the list of available SMs, stop trying
+                if (smPair.second == ConsumerPipe::NULL_CONSUMER_ID) {
+                  keepTrying = false;
+                  continue;
+                }
+
+                // attempt to fetch an event; stop trying if successful
+                //debugOutput("Before getOneEventFromSM");
+                bool success = getOneEventFromSM(smURL, remoteConsumerId);
+                //workString = "Consumer ";
+                //try {
+                //  workString.append(boost::lexical_cast<std::string>(localConsumerId));
+                //  workString.append(" event status = ");
+                //  workString.append(boost::lexical_cast<std::string>(success));
+                //  workString.append(" from ");
+                //  workString.append(smURL);
+                //}
+                //catch (boost::bad_lexical_cast& blcExcpt) {
+                //  workString.append("??? (8)");
+                //}
+                //debugOutput(workString);
+                if (success) {
+                  infoPtr->setEventFetchSuccess(smPair.first);
+                  keepTrying = false;
+                }
+              }
+            }
+
+            // re-fetch the time to wait (since it may have changed depending
+            // on whether the event fetch worked) and update our sleep time
+            time2wait = infoPtr->getTimeToWaitForEvent();
+            //workString = "Consumer ";
+            //try {
+            //  workString.append(boost::lexical_cast<std::string>(localConsumerId));
+            //  workString.append(" final time to wait = ");
+            //  workString.append(boost::lexical_cast<std::string>(time2wait));
+            //}
+            //catch (boost::bad_lexical_cast& blcExcpt) {
+            //  workString.append("??? (9)");
+            //}
+            //debugOutput(workString);
+            if (time2wait < sleepTime && time2wait >= 0.0) {
+              sleepTime = time2wait;
+            }
+          }
+        }
+
+        // remove any disconnected consumers from the consumer map
+        for (uint32 idx = 0; idx < disconnectedList.size(); ++idx) {
+          consumerMap_.erase(disconnectedList[idx]);
+        }
+
+        //workString = "Final sleepTime = ";
+        //try {
+        //  workString.append(boost::lexical_cast<std::string>(sleepTime));
+        //}
+        //catch (boost::bad_lexical_cast& blcExcpt) {
+        //  workString.append("??? (9)");
+        //}
+        //debugOutput(workString);
+        // sleep for the desired amount of time
+        if(sleepTime > 0.0) usleep(static_cast<int>(1000000 * sleepTime));
       }
       if(alreadyRegisteredDQM_) {
+        //debugOutput("Before getDQMEventFromAllSM");
         getDQMEventFromAllSM();
+        //debugOutput("After getDQMEventFromAllSM");
       }
 
       // check for any commands - empty() does not block
@@ -290,10 +554,21 @@ namespace stor
     if(alreadyInList) return;
     smList_.push_back(smURL);
     smRegMap_.insert(std::make_pair(smURL,0));
-    struct timeval lastRequestTime;
-    lastRequestTime.tv_sec = 0;
-    lastRequestTime.tv_usec = 0;
-    lastReqMap_.insert(std::make_pair(smURL,lastRequestTime));
+
+    std::cout << "### Adding SM URL: " << smURL << std::endl;
+    // add the SM to the ProxyInfo objects in the consumer map, and protect
+    // against other operations on the map elsewhere in this class.
+    {
+      boost::mutex::scoped_lock sl(consumerMapMutex_);
+
+      ConsumerInfo_map::const_iterator infoIter;
+      for (infoIter = consumerMap_.begin();
+           infoIter != consumerMap_.end();
+           ++infoIter) {
+        boost::shared_ptr<ConsumerProxyInfo> infoPtr = infoIter->second;
+        infoPtr->addSM(smURL);
+      }
+    }
   }
 
   void DataProcessManager::addDQMSM2Register(std::string DQMsmURL)
@@ -317,20 +592,60 @@ namespace stor
     lastDQMReqMap_.insert(std::make_pair(DQMsmURL,lastRequestTime));
   }
 
-  bool DataProcessManager::registerWithAllSM()
+  void DataProcessManager::addLocalConsumer(boost::shared_ptr<ConsumerPipe> consPtr)
   {
-    // One try at registering with the SM on each subfarm
-    // return true if registered with all SM 
-    // Only make one attempt and return so we can make this thread stop
-    if(smList_.size() == 0) return false;
-    bool allRegistered = true;
-    for(unsigned int i = 0; i < smList_.size(); ++i) {
-      if(smRegMap_[smList_[i] ] > 0) continue; // already registered
-      int consumerid = registerWithSM(smList_[i]);
-      if(consumerid > 0) smRegMap_[smList_[i] ] = consumerid;
-      else allRegistered = false;
+    // make an entry in the consumerMap for the consumer, and protect
+    // against other operations on the map elsewhere in this class.
+    boost::mutex::scoped_lock sl(consumerMapMutex_);
+
+    boost::shared_ptr<ConsumerProxyInfo>
+      infoPtr(new ConsumerProxyInfo(consPtr->getConsumerId(),
+                                    consPtr->getRateRequest(),
+                                    smList_, 255, 255));
+    consumerMap_[consPtr->getConsumerId()] = infoPtr;
+  }
+
+  bool DataProcessManager::registerWithAllSM(unsigned int localConsumerId)
+  {
+    boost::shared_ptr<ConsumerProxyInfo> infoPtr =
+      consumerMap_[localConsumerId];
+    // keep the old-style registration for the proxy server itself (for now)
+    if (localConsumerId == ConsumerPipe::NULL_CONSUMER_ID) {
+      // One try at registering with the SM on each subfarm
+      // return true if registered with all SM 
+      // Only make one attempt and return so we can make this thread stop
+      if(smList_.size() == 0) return false;
+      bool allRegistered = true;
+      for(unsigned int i = 0; i < smList_.size(); ++i) {
+        if(smRegMap_[smList_[i] ] > 0) continue; // already registered
+        int consumerid = registerWithSM(smList_[i], localConsumerId);
+        if(consumerid > 0) smRegMap_[smList_[i] ] = consumerid;
+        else allRegistered = false;
+
+        if (consumerid != static_cast<int>(ConsumerPipe::NULL_CONSUMER_ID)) {
+          infoPtr->setRegistrationSuccess(smList_[i], consumerid);
+        }
+      }
+      return allRegistered;
     }
-    return allRegistered;
+    else {
+      if (! infoPtr->needsRegistration()) {return false;}
+      std::vector<std::string> regList = infoPtr->getSMRegistrationList();
+      for (unsigned int idx = 0; idx < regList.size(); ++idx) {
+        unsigned int remoteConsumerId =
+          registerWithSM(regList[idx], localConsumerId);
+        //std::cout << "### remoteConsumerId(" << idx << ") = "
+        //          << remoteConsumerId << std::endl;
+        if (remoteConsumerId != ConsumerPipe::NULL_CONSUMER_ID) {
+          infoPtr->setRegistrationSuccess(regList[idx], remoteConsumerId);
+        }
+      }
+      //std::cout << "### isReadyForHeaders = " << infoPtr->isReadyForHeaders()
+      //          << std::endl;
+      //std::cout << "### needsRegistration = " << infoPtr->needsRegistration()
+      //          << std::endl;
+      return (infoPtr->isReadyForHeaders() && ! infoPtr->needsRegistration());
+    }
   }
 
   bool DataProcessManager::registerWithAllDQMSM()
@@ -349,11 +664,14 @@ namespace stor
     return allRegistered;
   }
 
-  int DataProcessManager::registerWithSM(std::string smURL)
+  int DataProcessManager::registerWithSM(std::string smURL,
+                                         unsigned int localConsumerId)
   {
     // Use this same registration method for both event data and DQM data
     // return with consumerID or 0 for failure
     stor::ReadData data;
+    std::cout << "### Attempting to register with " << smURL
+              << " for localConsumerId " << localConsumerId << std::endl;
 
     data.d_.clear();
     CURL* han = curl_easy_init();
@@ -373,12 +691,51 @@ namespace stor
     // build the registration request message to send to the storage manager
     const int BUFFER_SIZE = 2000;
     char msgBuff[BUFFER_SIZE];
-    ConsRegRequestBuilder requestMessage(msgBuff, BUFFER_SIZE, consumerName_,
-                                         consumerPriority_, consumerPSetString_);
+    boost::shared_ptr<ConsRegRequestBuilder> requestMessage;
+    if (localConsumerId == ConsumerPipe::NULL_CONSUMER_ID)
+    {
+      requestMessage.reset(new ConsRegRequestBuilder(msgBuff, BUFFER_SIZE,
+                                                     consumerName_,
+                                                     consumerPriority_,
+                                                     consumerPSetString_));
+    }
+    else
+    {
+      boost::shared_ptr<ConsumerProxyInfo> proxyInfoPtr =
+        consumerMap_[ConsumerPipe::NULL_CONSUMER_ID];
+      unsigned int proxyConsumerId = proxyInfoPtr->getRemoteConsumerId(smURL);
+
+      std::map< uint32, boost::shared_ptr<ConsumerPipe> > consumerTable = 
+        eventServer_->getConsumerTable();
+      boost::shared_ptr<ConsumerPipe> consPtr = consumerTable[localConsumerId];
+
+      edm::ParameterSet ps = ParameterSet();
+      Entry maxRateEntry = Entry("maxEventRequestRate",
+                                 consPtr->getRateRequest(),
+                                 false);
+      ps.insert(true, "maxEventRequestRate", maxRateEntry);
+
+      edm::ParameterSet subPSet = ParameterSet();
+      Entry selectionsEntry = Entry("SelectEvents",
+                                    consPtr->getTriggerSelection(),
+                                    true);
+      subPSet.insert(true, "SelectEvents", selectionsEntry);
+      Entry selectionsPSEntry = Entry("SelectEvents", subPSet, false);
+      ps.insert(true, "SelectEvents", selectionsPSEntry);
+
+      std::string localPSetString = ps.toString();
+      requestMessage.
+        reset(new ConsRegRequestBuilder(msgBuff, BUFFER_SIZE,
+                                        consPtr->getConsumerName(),
+                                        consPtr->getPriority(),
+                                        localPSetString,
+                                        localConsumerId,
+                                        proxyConsumerId));
+    }
 
     // add the request message as a http post
-    setopt(han, CURLOPT_POSTFIELDS, requestMessage.startAddress());
-    setopt(han, CURLOPT_POSTFIELDSIZE, requestMessage.size());
+    setopt(han, CURLOPT_POSTFIELDS, requestMessage->startAddress());
+    setopt(han, CURLOPT_POSTFIELDSIZE, requestMessage->size());
     struct curl_slist *headers=NULL;
     headers = curl_slist_append(headers, "Content-Type: application/octet-stream");
     headers = curl_slist_append(headers, "Content-Transfer-Encoding: binary");
@@ -388,6 +745,8 @@ namespace stor
     CURLcode messageStatus = curl_easy_perform(han);
     curl_slist_free_all(headers);
     curl_easy_cleanup(han);
+    //std::cout << "Message status for consumer " << localConsumerId
+    //          << " is " << messageStatus << std::endl;
 
     if(messageStatus!=0)
     {
@@ -399,6 +758,8 @@ namespace stor
     }
     uint32 registrationStatus = ConsRegResponseBuilder::ES_NOT_READY;
     int consumerId = 0;
+    //std::cout << "Data length for consumer " << localConsumerId
+    //          << " is " << data.d_.length() << std::endl;
     if(data.d_.length() > 0)
     {
       int len = data.d_.length();
@@ -410,8 +771,12 @@ namespace stor
         ConsRegResponseView respView(&buf_[0]);
         registrationStatus = respView.getStatus();
         consumerId = respView.getConsumerId();
+        //std::cout << "ID for consumer " << localConsumerId
+        //          << " is " << consumerId << std::endl;
         if (eventServer_.get() != NULL) {
-          eventServer_->setStreamSelectionTable(respView.getStreamSelectionTable());
+          if (localConsumerId == ConsumerPipe::NULL_CONSUMER_ID) {
+            eventServer_->setStreamSelectionTable(respView.getStreamSelectionTable());
+          }
         }
       }
       catch (cms::Exception excpt) {
@@ -461,7 +826,8 @@ namespace stor
     const int BUFFER_SIZE = 2000;
     char msgBuff[BUFFER_SIZE];
     ConsRegRequestBuilder requestMessage(msgBuff, BUFFER_SIZE, DQMconsumerName_,
-                                         DQMconsumerPriority_, consumerTopFolderName_);
+                                         DQMconsumerPriority_,
+                                         consumerTopFolderName_);
 
     // add the request message as a http post
     setopt(han, CURLOPT_POSTFIELDS, requestMessage.startAddress());
@@ -520,31 +886,69 @@ namespace stor
     return consumerId;
   }
 
-  bool DataProcessManager::getAnyHeaderFromSM()
+  bool DataProcessManager::getAnyHeaderFromSM(unsigned int localConsumerId)
   {
-    // Try the list of SM in order of registration to get one Header
-    bool gotOneHeader = false;
-    if(smList_.size() > 0) {
-       for(unsigned int i = 0; i < smList_.size(); ++i) {
-         if(smRegMap_[smList_[i] ] > 0) {
-            bool success = getHeaderFromSM(smList_[i]);
+    boost::shared_ptr<ConsumerProxyInfo> infoPtr =
+      consumerMap_[localConsumerId];
+    // keep the old-style registration for the proxy server itself (for now)
+    if (localConsumerId == ConsumerPipe::NULL_CONSUMER_ID) {
+      // Try the list of SM in order of registration to get one Header
+      bool gotOneHeader = false;
+      if(smList_.size() > 0) {
+        for(unsigned int i = 0; i < smList_.size(); ++i) {
+          if(smRegMap_[smList_[i] ] > 0 &&
+             ! infoPtr->hasHeaderFromSM(smList_[i])) {
+            std::cout << "Attempt1 for " << smList_[i] << std::endl;
+            bool success = getHeaderFromSM(smList_[i], localConsumerId,
+                                           smRegMap_[smList_[i]]);
+            // 18-Apr-2008, KAB - should get header from every SM because the
+            // SM executes necessary operations in response to a header request
             if(success) { // should cleam this up!
               gotOneHeader = true;
+
+              std::cout << "Success1 for " << smList_[i] << std::endl;
+              infoPtr->setHeaderFetchSuccess(smList_[i]);
+
               return gotOneHeader;
             }
-         }
-       }
-    } else {
-      // this is a problem (but maybe not with non-blocking processing loop)
-      return false;
+          }
+        }
+      } else {
+        // this is a problem (but maybe not with non-blocking processing loop)
+        return false;
+      }
+      return gotOneHeader;
     }
-    return gotOneHeader;
+    else {
+      if (! infoPtr->needsHeaders()) {return false;}
+      std::vector< std::pair<std::string, unsigned int> > hdrList =
+        infoPtr->getSMHeaderList();
+      for (unsigned int idx = 0; idx < hdrList.size(); ++idx) {
+        std::string smURL = hdrList[idx].first;
+        unsigned int remoteConsumerId = hdrList[idx].second;
+        //std::cout << "### remoteConsumerId(" << idx << ") = "
+        //          << remoteConsumerId << std::endl;
+        if (getHeaderFromSM(smURL, localConsumerId, remoteConsumerId)) {
+          std::cout << "Success2 for " << smURL << std::endl;
+          infoPtr->setHeaderFetchSuccess(smURL);
+        }
+      }
+      //std::cout << "### isReadyForEvents = " << infoPtr->isReadyForEvents()
+      //          << std::endl;
+      //std::cout << "### needsHeaders = " << infoPtr->needsHeaders()
+      //          << std::endl;
+      return (infoPtr->isReadyForEvents() && ! infoPtr->needsHeaders());
+    }
   }
 
-  bool DataProcessManager::getHeaderFromSM(std::string smURL)
+  bool DataProcessManager::getHeaderFromSM(std::string smURL,
+                                           unsigned int localConsumerId,
+                                           unsigned int remoteConsumerId)
   {
     // One single try to get a header from this SM URL
     stor::ReadData data;
+    std::cout << "### Attempting to get header from " << smURL
+              << " for localConsumerId " << localConsumerId << std::endl;
 
     data.d_.clear();
     CURL* han = curl_easy_init();
@@ -566,7 +970,7 @@ namespace stor
     OtherMessageBuilder requestMessage(&msgBuff[0], Header::HEADER_REQUEST,
                                        sizeof(char_uint32));
     uint8 *bodyPtr = requestMessage.msgBody();
-    convert(smRegMap_[smURL], bodyPtr);
+    convert(remoteConsumerId, bodyPtr);
     setopt(han, CURLOPT_POSTFIELDS, requestMessage.startAddress());
     setopt(han, CURLOPT_POSTFIELDSIZE, requestMessage.size());
     struct curl_slist *headers=NULL;
@@ -590,6 +994,11 @@ namespace stor
     if(data.d_.length() == 0)
     { 
       return false;
+    }
+
+    if (localConsumerId != ConsumerPipe::NULL_CONSUMER_ID)
+    {
+      return true;
     }
 
     // rely on http transfer string of correct length!
@@ -726,78 +1135,19 @@ namespace stor
     return false;
   }
 
-  void DataProcessManager::getEventFromAllSM()
+  bool DataProcessManager::getOneEventFromSM(std::string smURL,
+                                             unsigned int remoteConsumerId)
   {
-    // Try the list of SM in order of registration to get one event
-    // so long as we have the header from SM already
-    if(smList_.size() > 0 && haveHeader()) {
-      double time2wait = 0.0;
-      double sleepTime = 300.0;
-      bool gotOneEvent = false;
-      bool gotOne = false;
-      for(unsigned int i = 0; i < smList_.size(); ++i) {
-        if(smRegMap_[smList_[i] ] > 0) {   // is registered
-          gotOne = getOneEventFromSM(smList_[i], time2wait);
-          if(gotOne) {
-            gotOneEvent = true;
-          } else {
-            if(time2wait < sleepTime && time2wait >= 0.0) sleepTime = time2wait;
-          }
-        }
-      }
-      // check if we need to sleep (to enforce the allowed request rate)
-      // we don't want to ping the StorageManager app too often
-      if(!gotOneEvent) {
-        if(sleepTime > 0.0) usleep(static_cast<int>(1000000 * sleepTime));
-      }
-    }
-  }
-
-  double DataProcessManager::getTime2Wait(std::string smURL)
-  {
-    // calculate time since last ping of this SM in seconds
-    struct timeval now;
-    struct timezone dummyTZ;
-    gettimeofday(&now, &dummyTZ);
-    double timeDiff = (double) now.tv_sec;
-    timeDiff -= (double) lastReqMap_[smURL].tv_sec;
-    timeDiff += ((double) now.tv_usec / 1000000.0);
-    timeDiff -= ((double) lastReqMap_[smURL].tv_usec / 1000000.0);
-    if (timeDiff < minEventRequestInterval_)
-    {
-      return (minEventRequestInterval_ - timeDiff);
-    }
-    else
-    {
-      return 0.0;
-    }
-  }
-
-  void DataProcessManager::setTime2Now(std::string smURL)
-  {
-    struct timeval now;
-    struct timezone dummyTZ;
-    gettimeofday(&now, &dummyTZ);
-    lastReqMap_[smURL] = now;
-  }
-
-  bool DataProcessManager::getOneEventFromSM(std::string smURL, double& time2wait)
-  {
-    // See if we will exceed the request rate, if so just return false
-    // Return values: 
-    //    true = we have an event; false = no event (whatever reason)
-    // time2wait values:
-    //    0.0 = we pinged this SM this time; >0 = did not ping, wait this time
-    // if every SM returns false we sleep some time
-    time2wait = getTime2Wait(smURL);
-    if(time2wait > 0.0) {
-      return false;
-    } else {
-      setTime2Now(smURL);
-    }
+    //std::cout << "### getOneEvent " << smURL << " " << remoteConsumerId
+    //          << std::endl;
 
     // One single try to get a event from this SM URL
     stor::ReadData data;
+
+    // start a measurement of how long the HTTP POST takes
+    eventFetchTimer_.stop();
+    eventFetchTimer_.reset();
+    eventFetchTimer_.start();
 
     data.d_.clear();
     CURL* han = curl_easy_init();
@@ -822,7 +1172,8 @@ namespace stor
     OtherMessageBuilder requestMessage(&msgBuff[0], Header::EVENT_REQUEST,
                                        2 * sizeof(char_uint32));
     uint8 *bodyPtr = requestMessage.msgBody();
-    convert(smRegMap_[smURL], bodyPtr);
+
+    convert(remoteConsumerId, bodyPtr);
     bodyPtr += sizeof(char_uint32);
     convert((uint32) initMsgCollection_->size(), bodyPtr);
     setopt(han, CURLOPT_POSTFIELDS, requestMessage.startAddress());
@@ -832,10 +1183,18 @@ namespace stor
     headers = curl_slist_append(headers, "Content-Transfer-Encoding: binary");
     stor::setopt(han, CURLOPT_HTTPHEADER, headers);
 
+    //setopt(han, CURLOPT_FORBID_REUSE, 1);
+    //setopt(han, CURLOPT_VERBOSE, 1);
+    //setopt(han, CURLOPT_TCP_NODELAY, 1);
+
+    //debugOutput("getOneEventFromSM   AAA");
     // send the HTTP POST, read the reply, and cleanup before going on
     CURLcode messageStatus = curl_easy_perform(han);
     curl_slist_free_all(headers);
     curl_easy_cleanup(han);
+    //std::cout << "Message status for consumer " << remoteConsumerId
+    //          << " is " << messageStatus << std::endl;
+    //debugOutput("getOneEventFromSM   BBB");
 
     if(messageStatus!=0)
     { 
@@ -843,6 +1202,12 @@ namespace stor
       edm::LogError("getOneEventFromSM") << "curl perform failed for event. "
         << "Could not get event from an already registered Storage Manager"
         << " at " << smURL;
+
+      // keep statistics for all HTTP POSTS
+      eventFetchTimer_.stop();
+      ltEventFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+      stEventFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+
       return false;
     }
 
@@ -851,11 +1216,21 @@ namespace stor
     FDEBUG(9) << "getOneEventFromSM received len = " << len << std::endl;
     if(data.d_.length() == 0)
     { 
+      // keep statistics for all HTTP POSTS
+      eventFetchTimer_.stop();
+      ltEventFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+      stEventFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+
       return false;
     }
 
     buf_.resize(len);
     for (int i=0; i<len ; i++) buf_[i] = data.d_[i];
+
+    // keep statistics for all HTTP POSTS
+    eventFetchTimer_.stop();
+    ltEventFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+    stEventFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
 
     // first check if done message
     OtherMessageView msgView(&buf_[0]);
@@ -981,6 +1356,11 @@ namespace stor
     // One single try to get a event from this SM URL
     stor::ReadData data;
 
+    // start a measurement of how long the HTTP POST takes
+    dqmFetchTimer_.stop();
+    dqmFetchTimer_.reset();
+    dqmFetchTimer_.start();
+
     data.d_.clear();
     CURL* han = curl_easy_init();
     if(han==0)
@@ -1009,10 +1389,12 @@ namespace stor
     headers = curl_slist_append(headers, "Content-Transfer-Encoding: binary");
     stor::setopt(han, CURLOPT_HTTPHEADER, headers);
 
+    //debugOutput("getOneDQMEventFromSM   AAA");
     // send the HTTP POST, read the reply, and cleanup before going on
     CURLcode messageStatus = curl_easy_perform(han);
     curl_slist_free_all(headers);
     curl_easy_cleanup(han);
+    //debugOutput("getOneDQMEventFromSM   BBB");
 
     if(messageStatus!=0)
     { 
@@ -1020,6 +1402,12 @@ namespace stor
       edm::LogError("getOneDQMEventFromSM") << "curl perform failed for DQM event. "
         << "Could not get DQMevent from an already registered Storage Manager"
         << " at " << smURL;
+
+      // keep statistics for all HTTP POSTS
+      dqmFetchTimer_.stop();
+      ltDQMFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+      stDQMFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+
       return false;
     }
 
@@ -1028,11 +1416,21 @@ namespace stor
     FDEBUG(9) << "getOneDQMEventFromSM received len = " << len << std::endl;
     if(data.d_.length() == 0)
     { 
+      // keep statistics for all HTTP POSTS
+      dqmFetchTimer_.stop();
+      ltDQMFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+      stDQMFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+
       return false;
     }
 
     buf_.resize(len);
     for (int i=0; i<len ; i++) buf_[i] = data.d_[i];
+
+    // keep statistics for all HTTP POSTS
+    dqmFetchTimer_.stop();
+    ltDQMFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
+    stDQMFetchTimeCounter_->addSample(eventFetchTimer_.realTime());
 
     // first check if done message
     OtherMessageView msgView(&buf_[0]);
@@ -1061,6 +1459,71 @@ namespace stor
     {
        stats_ = pmeter_->getStats();
     }
-}
+  }
 
+  double DataProcessManager::getSampleCount(STATS_TIME_FRAME timeFrame,
+                                            STATS_TIMING_TYPE timingType,
+                                            double currentTime)
+  {
+    if (timeFrame == SHORT_TERM) {
+      if (timingType == DQMEVENT_FETCH) {
+        return stDQMFetchTimeCounter_->getSampleCount(currentTime);
+      }
+      else {
+        return stEventFetchTimeCounter_->getSampleCount(currentTime);
+      }
+    }
+    else {
+      if (timingType == DQMEVENT_FETCH) {
+        return ltDQMFetchTimeCounter_->getSampleCount();
+      }
+      else {
+        return ltEventFetchTimeCounter_->getSampleCount();
+      }
+    }
+  }
+
+  double DataProcessManager::getAverageValue(STATS_TIME_FRAME timeFrame,
+                                             STATS_TIMING_TYPE timingType,
+                                             double currentTime)
+  {
+    if (timeFrame == SHORT_TERM) {
+      if (timingType == DQMEVENT_FETCH) {
+        return stDQMFetchTimeCounter_->getValueAverage(currentTime);
+      }
+      else {
+        return stEventFetchTimeCounter_->getValueAverage(currentTime);
+      }
+    }
+    else {
+      if (timingType == DQMEVENT_FETCH) {
+        return ltDQMFetchTimeCounter_->getValueAverage();
+      }
+      else {
+        return ltEventFetchTimeCounter_->getValueAverage();
+      }
+    }
+  }
+
+  double DataProcessManager::getDuration(STATS_TIME_FRAME timeFrame,
+                                         STATS_TIMING_TYPE timingType,
+                                         double currentTime)
+  {
+    if (timeFrame == SHORT_TERM) {
+      if (timingType == DQMEVENT_FETCH) {
+        return stDQMFetchTimeCounter_->getDuration(currentTime);
+      }
+      else {
+        return stEventFetchTimeCounter_->getDuration(currentTime);
+      }
+    }
+    else {
+      if (timingType == DQMEVENT_FETCH) {
+        return ltDQMFetchTimeCounter_->getDuration(currentTime);
+      }
+      else {
+        return ltEventFetchTimeCounter_->getDuration(currentTime);
+      }
+    }
+  }
 }
