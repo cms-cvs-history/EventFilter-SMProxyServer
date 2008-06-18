@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.15 2008/04/16 18:25:19 biery Exp $
+// $Id: SMProxyServer.cc,v 1.15.2.1 2008/05/27 18:15:03 biery Exp $
 
 #include <iostream>
 #include <iomanip>
@@ -52,6 +52,7 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
   ah_(0), 
   collateDQM_(false),
   archiveDQM_(false),
+  archiveIntervalDQM_(0),
   filePrefixDQM_("/tmp/DQM"),
   purgeTimeDQM_(DEFAULT_PURGE_TIME),
   readyTimeDQM_(DEFAULT_READY_TIME),
@@ -105,6 +106,7 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s)
 
   ispace->fireItemAvailable("collateDQM",     &collateDQM_);
   ispace->fireItemAvailable("archiveDQM",     &archiveDQM_);
+  ispace->fireItemAvailable("archiveIntervalDQM",  &archiveIntervalDQM_);
   ispace->fireItemAvailable("purgeTimeDQM",   &purgeTimeDQM_);
   ispace->fireItemAvailable("readyTimeDQM",   &readyTimeDQM_);
   ispace->fireItemAvailable("filePrefixDQM",  &filePrefixDQM_);
@@ -2308,6 +2310,7 @@ void SMProxyServer::setupFlashList()
   is->fireItemAvailable("connectedSMs",         &connectedSMs_);
   is->fireItemAvailable("collateDQM",           &collateDQM_);
   is->fireItemAvailable("archiveDQM",           &archiveDQM_);
+  is->fireItemAvailable("archiveIntervalDQM",   &archiveIntervalDQM_);
   is->fireItemAvailable("purgeTimeDQM",         &purgeTimeDQM_);
   is->fireItemAvailable("readyTimeDQM",         &readyTimeDQM_);
   is->fireItemAvailable("filePrefixDQM",        &filePrefixDQM_);
@@ -2352,6 +2355,7 @@ void SMProxyServer::setupFlashList()
   is->addItemRetrieveListener("connectedSMs",         this);
   is->addItemRetrieveListener("collateDQM",           this);
   is->addItemRetrieveListener("archiveDQM",           this);
+  is->addItemRetrieveListener("archiveIntervalDQM",   this);
   is->addItemRetrieveListener("purgeTimeDQM",         this);
   is->addItemRetrieveListener("readyTimeDQM",         this);
   is->addItemRetrieveListener("filePrefixDQM",        this);
@@ -2463,6 +2467,7 @@ bool SMProxyServer::configuring(toolbox::task::WorkLoop* wl)
 
       dpm_->setCollateDQM(collateDQM_);
       dpm_->setArchiveDQM(archiveDQM_);
+      dpm_->setArchiveIntervalDQM(archiveIntervalDQM_);
       dpm_->setPurgeTimeDQM(purgeTimeDQM_);
       dpm_->setReadyTimeDQM(readyTimeDQM_);
       dpm_->setFilePrefixDQM(filePrefixDQM_);

@@ -1,6 +1,6 @@
 #ifndef SMPS_DATA_PROCESS_MANAGER_HPP
 #define SMPS_DATA_PROCESS_MANAGER_HPP
-// $Id: DataProcessManager.h,v 1.5 2008/02/11 14:54:52 biery Exp $
+// $Id: DataProcessManager.h,v 1.5.2.1 2008/05/27 18:13:37 biery Exp $
 
 #include "EventFilter/StorageManager/interface/EventServer.h"
 #include "EventFilter/StorageManager/interface/DQMEventServer.h"
@@ -64,6 +64,9 @@ namespace stor
 
     void setArchiveDQM(bool archiveDQM)
     { dqmServiceManager_->setArchiveDQM(archiveDQM); }
+
+    void setArchiveIntervalDQM(int archiveInterval)
+    { dqmServiceManager_->setArchiveInterval(archiveInterval); }
 
     void setPurgeTimeDQM(int purgeTimeDQM)
     { dqmServiceManager_->setPurgeTime(purgeTimeDQM);}
