@@ -1,3 +1,24 @@
+2008-06-18  Kurt Biery <biery@fnal.gov>
+
+	* tag V01-07-03
+	* Added archiveIntervalDQM configuration parameter to control how often
+	  we archive DQM histograms (once every N lumi sections, where
+	  archiveIntervalDQM = N)
+
+2008-06-11  Kurt Biery <biery@fnal.gov>
+
+	* tag V01-07-02
+	* Fixed the DataProcessManager::getHeaderFromAllSM() method so that
+	  Andreas can configure and enable the ProxyServer before the
+	  StorageManager is enabled (and possibly configured).
+
+2008-05-27  Kurt Biery <biery@fnal.gov>
+
+	* tag V01-07-01
+	* Modified the EventServer functionality to match what is needed for
+	  CRUZET-2.  Included Harry's fix for fetching events from multiple
+	  StorageManagers (DataProcessManager::getHeaderFromAllSM()).
+
 2008-04-17  Harry Cheung <cheung@fnal.gov>
 
 	* tag V01-07-00
