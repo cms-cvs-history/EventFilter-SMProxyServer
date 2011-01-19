@@ -1,4 +1,4 @@
-// $Id: DataManager.h,v 1.12 2010/12/10 19:38:48 mommsen Exp $
+// $Id: DataManager.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
 /// @file: DataManager.h 
 
 #ifndef SMProxyServer_DataManager_h
@@ -26,8 +26,8 @@ namespace smproxy {
    * Manages the data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.12 $
-   * $Date: 2010/12/10 19:38:48 $
+   * $Revision: 1.1.2.1 $
+   * $Date: 2011/01/18 15:32:34 $
    */
   
   class DataManager
@@ -62,7 +62,6 @@ namespace smproxy {
     const DataRetrieverParams _dataRetrieverParams;
 
     boost::scoped_ptr<boost::thread> _thread;
-    bool _process;
 
     typedef boost::shared_ptr<EventRetriever> EventRetrieverPtr;
     typedef std::map<stor::EventConsRegPtr, EventRetrieverPtr,

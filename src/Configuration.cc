@@ -1,8 +1,7 @@
-// $Id: Configuration.cc,v 1.41 2010/12/17 18:21:05 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
-#include "EventFilter/StorageManager/interface/Utils.h"
 
 #include <toolbox/net/Utils.h>
 
@@ -55,8 +54,10 @@ namespace smproxy
 
   void Configuration::setDataRetrieverDefaults(unsigned long instanceNumber)
   {
-    _dataRetrieverParamCopy._smRegistrationList.clear();
     _dataRetrieverParamCopy._smpsInstance = instanceNumber;
+    _dataRetrieverParamCopy._smRegistrationList.clear();
+    _dataRetrieverParamCopy._sleepTimeIfIdle =
+      boost::posix_time::seconds(1);
 
     std::string tmpString(toolbox::net::getHostName());
     // strip domainame
@@ -83,9 +84,12 @@ namespace smproxy
   {
     // copy the initial defaults into the xdata variables
     stor::utils::getXdataVector(_dataRetrieverParamCopy._smRegistrationList, _smRegistrationList);
+    _sleepTimeIfIdle =
+      stor::utils::duration_to_seconds(_dataRetrieverParamCopy._sleepTimeIfIdle);
 
     // bind the local xdata variables to the infospace
     infoSpace->fireItemAvailable("SMRegistrationList", &_smRegistrationList);
+    infoSpace->fireItemAvailable("SleepTimeIfIdle", &_sleepTimeIfIdle);
   }
   
   void Configuration::updateLocalRunData()
@@ -96,6 +100,8 @@ namespace smproxy
   void Configuration::updateLocalDataRetrieverData()
   {
     stor::utils::getStdVector(_smRegistrationList, _dataRetrieverParamCopy._smRegistrationList);
+    _dataRetrieverParamCopy._sleepTimeIfIdle =
+      stor::utils::seconds_to_duration(_sleepTimeIfIdle);
   }
 
 } // namespace smproxy

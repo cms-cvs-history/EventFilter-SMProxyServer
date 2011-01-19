@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.25 2010/12/10 19:38:48 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -48,6 +48,7 @@ namespace smproxy
   void EventRetriever::stop()
   {
     edm::shutdown_flag = true;
+    _thread->interrupt();
     _thread->join();
     
     boost::mutex::scoped_lock sl(_queueIDsLock);
@@ -65,7 +66,7 @@ namespace smproxy
     {
       if ( _queueIDs.empty() )
       {
-        sleep(1);
+        boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
       }
       else
       {
@@ -93,6 +94,7 @@ namespace smproxy
     { 
       if (edm::shutdown_flag) continue;
       
+      // each event retriever shall start from a different SM
       size_t smInstance = (_instance + i) % smCount;
       _pset.addParameter<std::string>("sourceURL",
         _dataRetrieverParams._smRegistrationList[smInstance]);
@@ -109,6 +111,7 @@ namespace smproxy
           _dataRetrieverParams._smRegistrationList[smInstance];
       }
     }
+    // start with the first SM in our list
     _nextSMtoUse = _eventServers.begin();
 
     return (_eventServers.size() == smCount);
@@ -128,9 +131,25 @@ namespace smproxy
   bool EventRetriever::getNextEvent(EventMsg event)
   {
     std::string data;
+    size_t tries = 0;
 
-    while ( ! (*(++_nextSMtoUse))->getEventMaybe(data) ) {}
-    // How to throttle the request rate if no SM has data?
+    while ( ! edm::shutdown_flag && data.empty() )
+    {
+      if ( tries == _eventServers.size() )
+      {
+        // all event servers have been tried
+        boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
+        tries = 0;
+      }
+
+      if ( ++_nextSMtoUse == _eventServers.end() )
+        _nextSMtoUse = _eventServers.begin();
+      
+      (*_nextSMtoUse)->getEventMaybe(data);
+      ++tries;
+    }
+
+    if ( edm::shutdown_flag ) return false;
 
     EventMsgView eventMsgView(&data[0]);
     if (eventMsgView.code() == Header::DONE) return false;

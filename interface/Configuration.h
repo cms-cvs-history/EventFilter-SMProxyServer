@@ -1,15 +1,16 @@
-// $Id: Configuration.h,v 1.26 2010/12/14 12:56:51 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
 /// @file: Configuration.h 
-
 
 #ifndef SMProxyServer_Configuration_h
 #define SMProxyServer_Configuration_h
+
+#include "EventFilter/StorageManager/interface/Utils.h"
 
 #include "xdata/InfoSpace.h"
 #include "xdata/String.h"
 //#include "xdata/Integer.h"
 #include "xdata/UnsignedInteger32.h"
-//#include "xdata/Double.h"
+#include "xdata/Double.h"
 //#include "xdata/Boolean.h"
 #include "xdata/Vector.h"
 
@@ -26,6 +27,7 @@ namespace smproxy
   {
     typedef std::vector<std::string> SMRegistrationList;
     SMRegistrationList _smRegistrationList;
+    stor::utils::duration_t _sleepTimeIfIdle;
 
     // not mapped to infospace params
     uint32_t _smpsInstance;
@@ -38,8 +40,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.26 $
-   * $Date: 2010/12/14 12:56:51 $
+   * $Revision: 1.1.2.1 $
+   * $Date: 2011/01/18 15:32:34 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -110,6 +112,7 @@ namespace smproxy
     unsigned int _localRunNumber;
 
     xdata::Vector<xdata::String> _smRegistrationList;
+    xdata::Double _sleepTimeIfIdle;
   };
 
 } // namespace smproxy

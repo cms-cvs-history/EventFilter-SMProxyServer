@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.25 2010/12/10 19:38:48 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -16,8 +16,7 @@ namespace smproxy
   _initMsgCollection(imc),
   _eventQueueCollection(eqc),
   _registrationQueue(regQueue),
-  _dataRetrieverParams(drp),
-  _process(true)
+  _dataRetrieverParams(drp)
   {
     _thread.reset(
       new boost::thread( boost::bind( &DataManager::doIt, this) )
@@ -32,7 +31,8 @@ namespace smproxy
   
   void DataManager::stop()
   {
-    _process = false;
+    // enqueue a dummy RegInfoBase to tell the thread to stop
+    _registrationQueue->enq_wait( stor::RegInfoBasePtr() );
     _thread->join();
 
     _eventRetrievers.clear();
@@ -42,20 +42,21 @@ namespace smproxy
   void DataManager::doIt()
   {
     stor::RegInfoBasePtr regInfo;
+    bool process(true);
 
-    while (_process) {
+    do
+    {
+      _registrationQueue->deq_wait(regInfo);
 
-      if ( _registrationQueue->deq_timed_wait(regInfo, boost::posix_time::seconds(1)) )
+      if ( ! (addEventConsumer(regInfo) || addDQMEventConsumer(regInfo)) )
       {
-        if ( ! (addEventConsumer(regInfo) || addDQMEventConsumer(regInfo)) )
-        {
-          // unknown consumer registration received
-        }
+        // base type received, signalling the end of the run
+        process = false;
       }
-    }
+    } while (process);
   }
-
-
+  
+  
   bool DataManager::addEventConsumer(stor::RegInfoBasePtr regInfo)
   {
     stor::EventConsRegPtr eventConsumer =
