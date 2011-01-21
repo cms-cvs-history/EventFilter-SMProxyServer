@@ -1,8 +1,17 @@
-// $Id: Configuration.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: StateMachine.h,v 1.1.2.1 2011/01/20 10:27:22 mommsen Exp $
 /// @file: StateMachine.h 
 
 #ifndef SMProxyServer_StateMachine_h
 #define SMProxyServer_StateMachine_h
+
+#include "EventFilter/SMProxyServer/interface/Configuration.h"
+#include "EventFilter/SMProxyServer/interface/DataManager.h"
+#include "EventFilter/SMProxyServer/interface/EventQueueCollection.h"
+#include "EventFilter/SMProxyServer/interface/StatisticsReporter.h"
+#include "EventFilter/StorageManager/interface/DQMEventQueueCollection.h"
+#include "EventFilter/StorageManager/interface/InitMsgCollection.h"
+#include "EventFilter/StorageManager/interface/RegistrationCollection.h"
+#include "EventFilter/StorageManager/interface/RegistrationQueue.h"
 
 #include "xcept/Exception.h"
 #include "xcept/tools.h"
@@ -73,12 +82,46 @@ namespace smproxy
 
     std::string getStateName()
     { return state_cast<const StateName&>().stateName(); }
-    std::string getExternallyVisibleStateName()  { return _stateName.toString(); }
+    std::string getExternallyVisibleStateName()
+    { return _stateName.toString(); }
 
-  private:
+    ConfigurationPtr getConfiguration() const
+    { return _configuration; }
+    stor::RegistrationCollectionPtr getRegistrationCollection() const
+    { return _registrationCollection; }
+    stor::RegistrationQueuePtr getRegistrationQueue() const
+    { return  _registrationQueue; }
+    stor::InitMsgCollectionPtr getInitMsgCollection() const
+    { return _initMsgCollection; }
+    EventQueueCollectionPtr getEventQueueCollection() const
+    { return _eventQueueCollection; }
+    stor::DQMEventQueueCollectionPtr getDQMEventQueueCollection() const
+    { return _dqmEventQueueCollection; }
+    StatisticsReporterPtr getStatisticsReporter() const
+    { return _statisticsReporter; }
+
+    void updateConfiguration();
+    void setQueueSizes();
+    void clearInitMsgCollection();
+    void clearConsumerRegistrations();
+    void enableConsumerRegistration();
+    void disableConsumerRegistration();
+    void clearQueues();
     
+    
+  private:
+
     xdaq::Application* _app;
     xdaq2rc::RcmsStateNotifier _rcmsStateNotifier;
+    ConfigurationPtr _configuration;
+    stor::RegistrationCollectionPtr _registrationCollection;
+    stor::RegistrationQueuePtr _registrationQueue;
+    stor::InitMsgCollectionPtr _initMsgCollection;
+    StatisticsReporterPtr _statisticsReporter;
+    EventQueueCollectionPtr _eventQueueCollection;
+    stor::DQMEventQueueCollectionPtr _dqmEventQueueCollection;
+
+    boost::scoped_ptr<DataManager> _dataManager;
 
     mutable boost::mutex _eventMutex;
     

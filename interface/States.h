@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: States.h,v 1.1.2.1 2011/01/20 10:27:22 mommsen Exp $
 /// @file: States.h 
 
 #ifndef SMProxyServer_States_h
@@ -13,7 +13,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/statechart/custom_reaction.hpp>
 #include <boost/statechart/event.hpp>
-#include <boost/statechart/in_state_reaction.hpp>
 #include <boost/statechart/state.hpp>
 #include <boost/statechart/transition.hpp>
 
@@ -253,7 +252,6 @@ namespace smproxy
     
   private:
     boost::scoped_ptr<boost::thread> configuringThread_;
-    bool doConfiguring_;
 
   };
 
@@ -329,7 +327,6 @@ namespace smproxy
     
   private:
     boost::scoped_ptr<boost::thread> stoppingThread_;
-    bool doStopping_;
 
   };
 
@@ -357,7 +354,6 @@ namespace smproxy
     
   private:
     boost::scoped_ptr<boost::thread> haltingThread_;
-    bool doHalting_;
 
   };
 
@@ -385,7 +381,6 @@ namespace smproxy
     
   private:
     boost::scoped_ptr<boost::thread> startingThread_;
-    bool doStarting_;
 
   };
 

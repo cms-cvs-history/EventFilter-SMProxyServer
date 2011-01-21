@@ -1,14 +1,15 @@
-// $Id: Configuration.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef SMProxyServer_Configuration_h
 #define SMProxyServer_Configuration_h
 
+#include "EventFilter/StorageManager/interface/Configuration.h"
 #include "EventFilter/StorageManager/interface/Utils.h"
 
 #include "xdata/InfoSpace.h"
 #include "xdata/String.h"
-//#include "xdata/Integer.h"
+#include "xdata/Integer.h"
 #include "xdata/UnsignedInteger32.h"
 #include "xdata/Double.h"
 //#include "xdata/Boolean.h"
@@ -35,13 +36,23 @@ namespace smproxy
   };
 
   /**
+   * Data structure to hold configuration parameters
+   * that are used for the various queues in the system.
+   */
+  struct QueueConfigurationParams
+  {
+    unsigned int _registrationQueueSize;
+    stor::utils::duration_t _monitoringSleepSec;
+  };
+
+  /**
    * Class for managing configuration information from the infospace
    * and providing local copies of that information that are updated
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.1 $
-   * $Date: 2011/01/18 15:32:34 $
+   * $Revision: 1.1.2.2 $
+   * $Date: 2011/01/19 16:22:02 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -77,43 +88,73 @@ namespace smproxy
     struct DataRetrieverParams getDataRetrieverParams() const;
 
     /**
+     * Returns a copy of the event serving parameters.  These values
+     * will be current as of the most recent global update of the local
+     * cache from the infospace (see the updateAllParams() method).
+     */
+    struct stor::EventServingParams getEventServingParams() const;
+
+    /**
+     * Returns a copy of the queue configuration parameters.  These values
+     * will be current as of the most recent global update of the local
+     * cache from the infospace (see the updateAllParams() method).
+     */
+    struct QueueConfigurationParams getQueueConfigurationParams() const;
+
+    /**
      * Updates the local copy of all configuration parameters from
      * the infospace.
      */
     void updateAllParams();
 
     /**
-     * Updates the local copy of the run configuration
-     * parameters from the infospace.
+     * Gets invoked when a operation is performed on the infospace
+     * that we are interested in knowing about.
      */
-    void updateRunParams();
+    virtual void actionPerformed(xdata::Event& isEvt);
 
-    /**
-     * Updates the local copy of the event retriever configuration
-     * parameters from the infospace.
-     */
-    void updateDataRetrieverParams();
 
   private:
 
     void setDataRetrieverDefaults(unsigned long instanceNumber);
+    void setEventServingDefaults();
+    void setQueueConfigurationDefaults();
 
     void setupRunInfoSpaceParams(xdata::InfoSpace* infoSpace);
     void setupDataRetrieverInfoSpaceParams(xdata::InfoSpace* infoSpace);
+    void setupEventServingInfoSpaceParams(xdata::InfoSpace* infoSpace);
+    void setupQueueConfigurationInfoSpaceParams(xdata::InfoSpace* infoSpace);
 
     void updateLocalRunData();
     void updateLocalDataRetrieverData();
+    void updateLocalEventServingData();
+    void updateLocalQueueConfigurationData();
 
     struct DataRetrieverParams _dataRetrieverParamCopy;
+    struct stor::EventServingParams _eventServeParamCopy;
+    struct QueueConfigurationParams _queueConfigParamCopy;
 
     mutable boost::mutex _generalMutex;
-
+    
     xdata::UnsignedInteger32 _infospaceRunNumber;
     unsigned int _localRunNumber;
-
+    
     xdata::Vector<xdata::String> _smRegistrationList;
-    xdata::Double _sleepTimeIfIdle;
+    xdata::UnsignedInteger32 _sleepTimeIfIdle;  // milliseconds
+    
+    xdata::Integer _activeConsumerTimeout;  // seconds
+    xdata::Integer _consumerQueueSize;
+    xdata::String  _consumerQueuePolicy;
+    xdata::Integer _DQMactiveConsumerTimeout;  // seconds
+    xdata::Integer _DQMconsumerQueueSize;
+    xdata::String  _DQMconsumerQueuePolicy;
+    
+    xdata::UnsignedInteger32 _registrationQueueSize;
+    xdata::Double _monitoringSleepSec;  // seconds
+
   };
+
+  typedef boost::shared_ptr<Configuration> ConfigurationPtr;
 
 } // namespace smproxy
 

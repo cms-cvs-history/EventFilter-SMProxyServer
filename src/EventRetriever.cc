@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -128,7 +128,7 @@ namespace smproxy
   }
   
   
-  bool EventRetriever::getNextEvent(EventMsg event)
+  bool EventRetriever::getNextEvent(EventMsg& event)
   {
     std::string data;
     size_t tries = 0;
@@ -155,6 +155,7 @@ namespace smproxy
     if (eventMsgView.code() == Header::DONE) return false;
     
     event = EventMsg(eventMsgView);
+    std::cout << "Received event with size " << event.totalDataSize() << std::endl;
 
     return true;
   }

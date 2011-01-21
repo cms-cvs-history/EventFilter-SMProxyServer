@@ -1,8 +1,10 @@
-// $Id: Configuration.cc,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.1 2011/01/20 10:27:22 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "EventFilter/SMProxyServer/interface/States.h"
+#include "EventFilter/StorageManager/interface/EventConsumerMonitorCollection.h"
+#include "EventFilter/StorageManager/interface/DQMConsumerMonitorCollection.h"
 
 #include "xdata/InfoSpace.h"
 
@@ -26,8 +28,6 @@ namespace smproxy
   ),
   _reasonForFailed("")
   {
-    initiate();
-
     std::ostringstream oss;
     oss << app->getApplicationDescriptor()->getClassName()
       << app->getApplicationDescriptor()->getInstance();
@@ -40,6 +40,29 @@ namespace smproxy
       _rcmsStateNotifier.getFoundRcmsStateListenerParameter() );
     _rcmsStateNotifier.findRcmsStateListener();
     _rcmsStateNotifier.subscribeToChangesInRcmsStateListener(is);
+
+    _configuration.reset(new Configuration(
+        app->getApplicationInfoSpace(), app->getApplicationDescriptor()->getInstance()
+      ));
+
+    _registrationCollection.reset( new stor::RegistrationCollection() );
+    
+    _registrationQueue.reset(new stor::RegistrationQueue(
+        _configuration->getQueueConfigurationParams()._registrationQueueSize
+      ));
+    
+    _initMsgCollection.reset(new stor::InitMsgCollection());
+
+    _statisticsReporter.reset(new StatisticsReporter(app,
+        _configuration->getQueueConfigurationParams()));
+
+    _eventQueueCollection.reset(new EventQueueCollection(
+        _statisticsReporter->getEventConsumerMonitorCollection()));
+
+    _dqmEventQueueCollection.reset(new stor::DQMEventQueueCollection(
+        _statisticsReporter->getDQMConsumerMonitorCollection()));
+  
+    initiate();
   }
   
   
@@ -83,9 +106,89 @@ namespace smproxy
   }
   
   
+  void StateMachine::updateConfiguration()
+  {
+    std::string errorMsg = "Failed to update configuration parameters";
+    try
+    {
+      _configuration->updateAllParams();
+    }
+    catch(xcept::Exception &e)
+    {
+      XCEPT_DECLARE_NESTED(exception::Configuration,
+        sentinelException, errorMsg, e);
+      processEvent( Fail(sentinelException) );
+    }
+    catch( std::exception &e )
+    {
+      errorMsg.append(": ");
+      errorMsg.append( e.what() );
+      
+      XCEPT_DECLARE(exception::Configuration,
+        sentinelException, errorMsg);
+      processEvent( Fail(sentinelException) );
+    }
+    catch(...)
+    {
+      errorMsg.append(": unknown exception");
+      
+      XCEPT_DECLARE(exception::Configuration,
+        sentinelException, errorMsg);
+      processEvent( Fail(sentinelException) );
+    }
+  }
+  
+  
+  void StateMachine::setQueueSizes()
+  {
+    QueueConfigurationParams queueParams =
+      _configuration->getQueueConfigurationParams();
+    _registrationQueue->
+      set_capacity(queueParams._registrationQueueSize);
+  }
+  
+  
+  void StateMachine::clearInitMsgCollection()
+  {
+    _initMsgCollection->clear();
+  }
+  
+  
+  void StateMachine::clearConsumerRegistrations()
+  {
+    _registrationCollection->clearRegistrations();
+    _eventQueueCollection->removeQueues();
+    _dqmEventQueueCollection->removeQueues();
+  }
+  
+  
+  void StateMachine::enableConsumerRegistration()
+  {
+    _dataManager.reset( new DataManager(
+        _initMsgCollection, _eventQueueCollection,
+        _registrationQueue, _configuration->getDataRetrieverParams()
+      ) );
+    _registrationCollection->enableConsumerRegistration();
+  }
+ 
+  
+  void StateMachine::disableConsumerRegistration()
+  {
+    _registrationCollection->disableConsumerRegistration();
+    _dataManager->stop();
+  }
+ 
+  
+  void StateMachine::clearQueues()
+  {
+    _registrationQueue->clear();
+    _eventQueueCollection->clearQueues();
+    _dqmEventQueueCollection->clearQueues();
+  }
+  
+  
   void Configuring::entryAction()
   {
-    doConfiguring_ = true;
     configuringThread_.reset(
       new boost::thread( boost::bind( &Configuring::activity, this) )
     );
@@ -95,20 +198,22 @@ namespace smproxy
   void Configuring::activity()
   {
     outermost_context_type& stateMachine = outermost_context();
-    if (doConfiguring_) stateMachine.processEvent( ConfiguringDone() );
+    stateMachine.updateConfiguration();
+    boost::this_thread::interruption_point();
+    stateMachine.setQueueSizes();
+    boost::this_thread::interruption_point();
+    stateMachine.processEvent( ConfiguringDone() );
   }
 
   
   void Configuring::exitAction()
   {
-    doConfiguring_ = false;
-    configuringThread_->join();
+    configuringThread_->interrupt();
   }
   
   
   void Starting::entryAction()
   {
-    doStarting_ = true;
     startingThread_.reset(
       new boost::thread( boost::bind( &Starting::activity, this) )
     );
@@ -118,20 +223,24 @@ namespace smproxy
   void Starting::activity()
   {
     outermost_context_type& stateMachine = outermost_context();
-    if (doStarting_) stateMachine.processEvent( StartingDone() );
+    stateMachine.clearInitMsgCollection();
+    boost::this_thread::interruption_point();
+    stateMachine.clearConsumerRegistrations();
+    boost::this_thread::interruption_point();
+    stateMachine.enableConsumerRegistration();
+    boost::this_thread::interruption_point();
+    stateMachine.processEvent( StartingDone() );
   }
 
   
   void Starting::exitAction()
   {
-    doStarting_ = false;
-    startingThread_->join();
+    startingThread_->interrupt();
   }
   
   
   void Stopping::entryAction()
   {
-    doStopping_ = true;
     stoppingThread_.reset(
       new boost::thread( boost::bind( &Stopping::activity, this) )
     );
@@ -141,20 +250,22 @@ namespace smproxy
   void Stopping::activity()
   {
     outermost_context_type& stateMachine = outermost_context();
-    if (doStopping_) stateMachine.processEvent( StoppingDone() );
+    stateMachine.disableConsumerRegistration();
+    boost::this_thread::interruption_point();
+    stateMachine.clearQueues();
+    boost::this_thread::interruption_point();
+    stateMachine.processEvent( StoppingDone() );
   }
 
   
   void Stopping::exitAction()
   {
-    doStopping_ = false;
-    stoppingThread_->join();
+    stoppingThread_->interrupt();
   }
   
   
   void Halting::entryAction()
   {
-    doHalting_ = true;
     haltingThread_.reset(
       new boost::thread( boost::bind( &Halting::activity, this) )
     );
@@ -164,14 +275,17 @@ namespace smproxy
   void Halting::activity()
   {
     outermost_context_type& stateMachine = outermost_context();
-    if (doHalting_) stateMachine.processEvent( HaltingDone() );
+    stateMachine.disableConsumerRegistration();
+    boost::this_thread::interruption_point();
+    stateMachine.clearQueues();
+    boost::this_thread::interruption_point();
+    stateMachine.processEvent( HaltingDone() );
   }
 
   
   void Halting::exitAction()
   {
-    doHalting_ = false;
-    haltingThread_->join();
+    haltingThread_->interrupt();
   }
 
 } // namespace smproxy

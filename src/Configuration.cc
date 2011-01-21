@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -18,8 +18,12 @@ namespace smproxy
     // default values are used to initialize infospace values,
     // so they should be set first
     setDataRetrieverDefaults(instanceNumber);
+    setEventServingDefaults();
+    setQueueConfigurationDefaults();
 
     setupDataRetrieverInfoSpaceParams(infoSpace);
+    setupEventServingInfoSpaceParams(infoSpace);
+    setupQueueConfigurationInfoSpaceParams(infoSpace);
   }
 
   unsigned int Configuration::getRunNumber() const
@@ -33,23 +37,25 @@ namespace smproxy
     return _dataRetrieverParamCopy;
   }
 
+  struct stor::EventServingParams Configuration::getEventServingParams() const
+  {
+    boost::mutex::scoped_lock sl(_generalMutex);
+    return _eventServeParamCopy;
+  }
+
+  struct QueueConfigurationParams Configuration::getQueueConfigurationParams() const
+  {
+    boost::mutex::scoped_lock sl(_generalMutex);
+    return _queueConfigParamCopy;
+  }
+
   void Configuration::updateAllParams()
   {
     boost::mutex::scoped_lock sl(_generalMutex);
     updateLocalRunData();
     updateLocalDataRetrieverData();
-  }
-
-  void Configuration::updateRunParams()
-  {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    updateLocalRunData();
-  }
-
-  void Configuration::updateDataRetrieverParams()
-  {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    updateLocalDataRetrieverData();
+    updateLocalEventServingData();
+    updateLocalQueueConfigurationData();
   }
 
   void Configuration::setDataRetrieverDefaults(unsigned long instanceNumber)
@@ -57,7 +63,7 @@ namespace smproxy
     _dataRetrieverParamCopy._smpsInstance = instanceNumber;
     _dataRetrieverParamCopy._smRegistrationList.clear();
     _dataRetrieverParamCopy._sleepTimeIfIdle =
-      boost::posix_time::seconds(1);
+      boost::posix_time::milliseconds(100);
 
     std::string tmpString(toolbox::net::getHostName());
     // strip domainame
@@ -67,6 +73,22 @@ namespace smproxy
       tmpString = basename;
     }
     _dataRetrieverParamCopy._hostName = tmpString;
+  }
+  
+  void Configuration::setEventServingDefaults()
+  {
+    _eventServeParamCopy._activeConsumerTimeout = boost::posix_time::seconds(60);
+    _eventServeParamCopy._consumerQueueSize = 5;
+    _eventServeParamCopy._consumerQueuePolicy = "DiscardOld";
+    _eventServeParamCopy._DQMactiveConsumerTimeout = boost::posix_time::seconds(60);
+    _eventServeParamCopy._DQMconsumerQueueSize = 15;
+    _eventServeParamCopy._DQMconsumerQueuePolicy = "DiscardOld";
+  }
+
+  void Configuration::setQueueConfigurationDefaults()
+  {
+    _queueConfigParamCopy._registrationQueueSize = 128;
+    _queueConfigParamCopy._monitoringSleepSec = boost::posix_time::seconds(1);
   }
 
   void Configuration::
@@ -84,14 +106,46 @@ namespace smproxy
   {
     // copy the initial defaults into the xdata variables
     stor::utils::getXdataVector(_dataRetrieverParamCopy._smRegistrationList, _smRegistrationList);
-    _sleepTimeIfIdle =
-      stor::utils::duration_to_seconds(_dataRetrieverParamCopy._sleepTimeIfIdle);
+    _sleepTimeIfIdle = _dataRetrieverParamCopy._sleepTimeIfIdle.total_milliseconds();
 
     // bind the local xdata variables to the infospace
     infoSpace->fireItemAvailable("SMRegistrationList", &_smRegistrationList);
     infoSpace->fireItemAvailable("SleepTimeIfIdle", &_sleepTimeIfIdle);
   }
   
+  void Configuration::
+  setupEventServingInfoSpaceParams(xdata::InfoSpace* infoSpace)
+  {
+    // copy the initial defaults to the xdata variables
+    _activeConsumerTimeout = _eventServeParamCopy._activeConsumerTimeout.total_seconds();
+    _consumerQueueSize = _eventServeParamCopy._consumerQueueSize;
+    _consumerQueuePolicy = _eventServeParamCopy._consumerQueuePolicy;
+    _DQMactiveConsumerTimeout = _eventServeParamCopy._DQMactiveConsumerTimeout.total_seconds();
+    _DQMconsumerQueueSize = _eventServeParamCopy._DQMconsumerQueueSize;
+    _DQMconsumerQueuePolicy = _eventServeParamCopy._DQMconsumerQueuePolicy;
+
+    // bind the local xdata variables to the infospace
+    infoSpace->fireItemAvailable("activeConsumerTimeout", &_activeConsumerTimeout);
+    infoSpace->fireItemAvailable("consumerQueueSize", &_consumerQueueSize);
+    infoSpace->fireItemAvailable("consumerQueuePolicy", &_consumerQueuePolicy);
+    infoSpace->fireItemAvailable("DQMactiveConsumerTimeout", &_DQMactiveConsumerTimeout);
+    infoSpace->fireItemAvailable("DQMconsumerQueueSize", &_DQMconsumerQueueSize);
+    infoSpace->fireItemAvailable("DQMconsumerQueuePolicy",&_DQMconsumerQueuePolicy);
+  }
+  
+  void Configuration::
+  setupQueueConfigurationInfoSpaceParams(xdata::InfoSpace* infoSpace)
+  {
+    // copy the initial defaults to the xdata variables
+    _registrationQueueSize = _queueConfigParamCopy._registrationQueueSize;
+    _monitoringSleepSec =
+      stor::utils::duration_to_seconds(_queueConfigParamCopy._monitoringSleepSec);
+    
+    // bind the local xdata variables to the infospace
+    infoSpace->fireItemAvailable("registrationQueueSize", &_registrationQueueSize);
+    infoSpace->fireItemAvailable("monitoringSleepSec", &_monitoringSleepSec);
+  }
+ 
   void Configuration::updateLocalRunData()
   {
     _localRunNumber = _infospaceRunNumber;
@@ -101,8 +155,43 @@ namespace smproxy
   {
     stor::utils::getStdVector(_smRegistrationList, _dataRetrieverParamCopy._smRegistrationList);
     _dataRetrieverParamCopy._sleepTimeIfIdle =
-      stor::utils::seconds_to_duration(_sleepTimeIfIdle);
+      boost::posix_time::milliseconds(_sleepTimeIfIdle);
   }
+
+  void Configuration::updateLocalEventServingData()
+  {
+    _eventServeParamCopy._activeConsumerTimeout =
+      boost::posix_time::seconds( static_cast<int>(_activeConsumerTimeout) );
+    _eventServeParamCopy._consumerQueueSize = _consumerQueueSize;
+    _eventServeParamCopy._consumerQueuePolicy = _consumerQueuePolicy;
+    _eventServeParamCopy._DQMactiveConsumerTimeout = 
+      boost::posix_time::seconds( static_cast<int>(_DQMactiveConsumerTimeout) );
+    _eventServeParamCopy._DQMconsumerQueueSize = _DQMconsumerQueueSize;
+    _eventServeParamCopy._DQMconsumerQueuePolicy = _DQMconsumerQueuePolicy;
+    
+    // validation
+    if (_eventServeParamCopy._consumerQueueSize < 1)
+    {
+      _eventServeParamCopy._consumerQueueSize = 1;
+    }
+    if (_eventServeParamCopy._DQMconsumerQueueSize < 1)
+    {
+      _eventServeParamCopy._DQMconsumerQueueSize = 1;
+    }
+  }
+
+  void Configuration::updateLocalQueueConfigurationData()
+  {
+    _queueConfigParamCopy._registrationQueueSize = _registrationQueueSize;
+    _queueConfigParamCopy._monitoringSleepSec =
+      stor::utils::seconds_to_duration(_monitoringSleepSec);
+  }
+
+  void Configuration::actionPerformed(xdata::Event& ispaceEvent)
+  {
+    boost::mutex::scoped_lock sl(_generalMutex);
+  }
+
 
 } // namespace smproxy
 

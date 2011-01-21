@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -72,13 +72,11 @@ namespace smproxy
         new EventRetriever(_initMsgCollection, _eventQueueCollection,
           _dataRetrieverParams, eventConsumer->getPSet())
       );
-      _eventRetrievers.insert(pos, EventRetrieverMap::value_type(eventConsumer, eventRetriever));
+      pos = _eventRetrievers.insert(pos,
+        EventRetrieverMap::value_type(eventConsumer, eventRetriever));
     }
-    else
-    {
-      // retriever already available
-      pos->second->addQueue( eventConsumer->queueId() );
-    }
+
+    pos->second->addQueue( eventConsumer->queueId() );
     
     return true;
   }

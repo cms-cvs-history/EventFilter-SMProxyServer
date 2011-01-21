@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.12 2010/12/10 19:38:48 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef SMProxyServer_EventRetriever_h
@@ -26,8 +26,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.12 $
-   * $Date: 2010/12/10 19:38:48 $
+   * $Revision: 1.1.2.1 $
+   * $Date: 2011/01/18 15:32:34 $
    */
   
   class EventRetriever
@@ -60,7 +60,7 @@ namespace smproxy {
     void doIt();
     bool connect();
     void getInitMsg() const;
-    bool getNextEvent(EventMsg);
+    bool getNextEvent(EventMsg&);
 
     //Prevent copying of the EventRetriever
     EventRetriever(EventRetriever const&);

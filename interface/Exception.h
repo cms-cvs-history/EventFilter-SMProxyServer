@@ -1,4 +1,4 @@
-// $Id: Exception.h,v 1.15 2010/05/03 12:16:57 mommsen Exp $
+// $Id: Exception.h,v 1.1.2.1 2011/01/20 10:27:22 mommsen Exp $
 /// @file: Exception.h 
 
 #ifndef SMProxyServer_Exception_h
@@ -13,8 +13,8 @@ namespace smproxy {
      List of exceptions thrown by the SMProxyServer
 
      $Author: mommsen $
-     $Revision: 1.15 $
-     $Date: 2010/05/03 12:16:57 $
+     $Revision: 1.1.2.1 $
+     $Date: 2011/01/20 10:27:22 $
   */
 }
 
@@ -22,11 +22,6 @@ namespace smproxy {
  * Generic exception raised by the storage manager proxy server
  */
 XCEPT_DEFINE_EXCEPTION(smproxy, Exception)
-
-/**
- * Exception raised in case of a SOAP error
- */
-XCEPT_DEFINE_EXCEPTION(smproxy, SoapMessage)
 
 /**
  * Exception raised in case of a finite state machine error
@@ -41,7 +36,7 @@ XCEPT_DEFINE_EXCEPTION(smproxy, Monitoring)
 /**
  * Exception raised in case of problems accessing the info space
  */
-//XCEPT_DEFINE_EXCEPTION(smproxy, Infospace)
+XCEPT_DEFINE_EXCEPTION(smproxy, Infospace)
 
 /**
  * Exception raised in case of configuration problems
