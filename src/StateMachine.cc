@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.1 2011/01/20 10:27:22 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.2 2011/01/21 15:54:57 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
@@ -61,6 +61,9 @@ namespace smproxy
 
     _dqmEventQueueCollection.reset(new stor::DQMEventQueueCollection(
         _statisticsReporter->getDQMConsumerMonitorCollection()));
+
+    _dataManager.reset( new DataManager(
+        _initMsgCollection, _eventQueueCollection, _registrationQueue));
   
     initiate();
   }
@@ -164,10 +167,7 @@ namespace smproxy
   
   void StateMachine::enableConsumerRegistration()
   {
-    _dataManager.reset( new DataManager(
-        _initMsgCollection, _eventQueueCollection,
-        _registrationQueue, _configuration->getDataRetrieverParams()
-      ) );
+    _dataManager->start(_configuration->getDataRetrieverParams());
     _registrationCollection->enableConsumerRegistration();
   }
  

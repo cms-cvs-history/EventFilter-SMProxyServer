@@ -1,8 +1,8 @@
-// $Id: SMProxyServer.h,v 1.58 2010/04/16 12:31:34 mommsen Exp $
+// $Id: SMProxyServer.h,v 1.22.2.1 2011/01/21 15:54:56 mommsen Exp $
 /// @file: SMProxyServer.h 
 
-#ifndef SMProxyServer_SMProxyServer_h
-#define SMProxyServer_SMProxyServer_h
+#ifndef EventFilter_SMProxyServer_SMProxyServer_h
+#define EventFilter_SMProxyServer_SMProxyServer_h
 
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "EventFilter/StorageManager/interface/ConsumerUtils.h"
@@ -26,8 +26,8 @@ namespace smproxy {
    * Main class of the SMProxyServer XDAQ application
    *
    * $Author: mommsen $
-   * $Revision: 1.58 $
-   * $Date: 2010/04/16 12:31:34 $
+   * $Revision: 1.22.2.1 $
+   * $Date: 2011/01/21 15:54:56 $
    */
 
   class SMProxyServer: public xdaq::Application
@@ -153,7 +153,7 @@ namespace smproxy {
 
 } // namespace smproxy
 
-#endif // SMProxyServer_SMProxyServer_h
+#endif // EventFilter_SMProxyServer_SMProxyServer_h
 
 
 /// emacs configuration

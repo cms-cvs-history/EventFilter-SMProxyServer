@@ -1,8 +1,8 @@
-// $Id: StatisticsReporter.h,v 1.13 2010/04/12 15:25:26 mommsen Exp $
+// $Id: StatisticsReporter.h,v 1.1.2.1 2011/01/21 15:54:56 mommsen Exp $
 /// @file: StatisticsReporter.h 
 
-#ifndef SMProxyServer_StatisticsReporter_h
-#define SMProxyServer_StatisticsReporter_h
+#ifndef EventFilter_SMProxyServer_StatisticsReporter_h
+#define EventFilter_SMProxyServer_StatisticsReporter_h
 
 #include "toolbox/lang/Class.h"
 #include "toolbox/task/WaitingWorkLoop.h"
@@ -34,8 +34,8 @@ namespace smproxy {
    * statistics for all MonitorCollections.
    *
    * $Author: mommsen $
-   * $Revision: 1.13 $
-   * $Date: 2010/04/12 15:25:26 $
+   * $Revision: 1.1.2.1 $
+   * $Date: 2011/01/21 15:54:56 $
    */
   
   class StatisticsReporter : public toolbox::lang::Class, public xdata::ActionListener
@@ -128,7 +128,7 @@ namespace smproxy {
   
 } // namespace smproxy
 
-#endif // SMProxyServer_StatisticsReporter_h 
+#endif // EventFilter_SMProxyServer_StatisticsReporter_h 
 
 
 /// emacs configuration

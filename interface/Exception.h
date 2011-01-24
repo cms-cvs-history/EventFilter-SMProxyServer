@@ -1,8 +1,8 @@
-// $Id: Exception.h,v 1.1.2.1 2011/01/20 10:27:22 mommsen Exp $
+// $Id: Exception.h,v 1.1.2.2 2011/01/21 15:54:56 mommsen Exp $
 /// @file: Exception.h 
 
-#ifndef SMProxyServer_Exception_h
-#define SMProxyServer_Exception_h
+#ifndef EventFilter_SMProxyServer_Exception_h
+#define EventFilter_SMProxyServer_Exception_h
 
 
 #include "xcept/Exception.h"
@@ -13,8 +13,8 @@ namespace smproxy {
      List of exceptions thrown by the SMProxyServer
 
      $Author: mommsen $
-     $Revision: 1.1.2.1 $
-     $Date: 2011/01/20 10:27:22 $
+     $Revision: 1.1.2.2 $
+     $Date: 2011/01/21 15:54:56 $
   */
 }
 
@@ -64,7 +64,7 @@ XCEPT_DEFINE_EXCEPTION(smproxy, DQMConsumerRegistration)
 XCEPT_DEFINE_EXCEPTION(smproxy, StateTransition)
 
 
-#endif // SMProxyServer_Exception_h
+#endif // EventFilter_SMProxyServer_Exception_h
 
 
 /// emacs configuration

@@ -1,8 +1,8 @@
-// $Id: DataManager.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: DataManager.h,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
 /// @file: DataManager.h 
 
-#ifndef SMProxyServer_DataManager_h
-#define SMProxyServer_DataManager_h
+#ifndef EventFilter_SMProxyServer_DataManager_h
+#define EventFilter_SMProxyServer_DataManager_h
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -26,8 +26,8 @@ namespace smproxy {
    * Manages the data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.1 $
-   * $Date: 2011/01/18 15:32:34 $
+   * $Revision: 1.1.2.2 $
+   * $Date: 2011/01/19 16:22:02 $
    */
   
   class DataManager
@@ -36,13 +36,17 @@ namespace smproxy {
 
     DataManager
     (
-      boost::shared_ptr<stor::InitMsgCollection>,
-      boost::shared_ptr<EventQueueCollection>,
-      boost::shared_ptr<stor::RegistrationQueue>,
-      DataRetrieverParams const&
+      stor::InitMsgCollectionPtr,
+      EventQueueCollectionPtr,
+      stor::RegistrationQueuePtr
     );
 
     ~DataManager();
+
+    /**
+     * Start retrieving data
+     */
+    void start(DataRetrieverParams const&);
 
     /**
      * Stop retrieving data
@@ -56,10 +60,10 @@ namespace smproxy {
     bool addEventConsumer(stor::RegInfoBasePtr);
     bool addDQMEventConsumer(stor::RegInfoBasePtr);
 
-    boost::shared_ptr<stor::InitMsgCollection> _initMsgCollection;
-    boost::shared_ptr<EventQueueCollection> _eventQueueCollection;
-    boost::shared_ptr<stor::RegistrationQueue> _registrationQueue;
-    const DataRetrieverParams _dataRetrieverParams;
+    stor::InitMsgCollectionPtr _initMsgCollection;
+    EventQueueCollectionPtr _eventQueueCollection;
+    stor::RegistrationQueuePtr _registrationQueue;
+    DataRetrieverParams _dataRetrieverParams;
 
     boost::scoped_ptr<boost::thread> _thread;
 
@@ -72,7 +76,7 @@ namespace smproxy {
   
 } // namespace smproxy
 
-#endif // SMProxyServer_DataManager_h 
+#endif // EventFilter_SMProxyServer_DataManager_h 
 
 
 /// emacs configuration

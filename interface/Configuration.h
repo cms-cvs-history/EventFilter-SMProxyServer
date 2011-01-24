@@ -1,8 +1,8 @@
-// $Id: Configuration.h,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.3 2011/01/21 15:54:56 mommsen Exp $
 /// @file: Configuration.h 
 
-#ifndef SMProxyServer_Configuration_h
-#define SMProxyServer_Configuration_h
+#ifndef EventFilter_SMProxyServer_Configuration_h
+#define EventFilter_SMProxyServer_Configuration_h
 
 #include "EventFilter/StorageManager/interface/Configuration.h"
 #include "EventFilter/StorageManager/interface/Utils.h"
@@ -51,8 +51,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.2 $
-   * $Date: 2011/01/19 16:22:02 $
+   * $Revision: 1.1.2.3 $
+   * $Date: 2011/01/21 15:54:56 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -158,7 +158,7 @@ namespace smproxy
 
 } // namespace smproxy
 
-#endif // SMProxyServer_Configuration_h
+#endif // EventFilter_SMProxyServer_Configuration_h
 
 
 /// emacs configuration

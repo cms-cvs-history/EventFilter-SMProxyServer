@@ -1,8 +1,8 @@
-// $Id: States.h,v 1.1.2.1 2011/01/20 10:27:22 mommsen Exp $
+// $Id: States.h,v 1.1.2.2 2011/01/21 15:54:56 mommsen Exp $
 /// @file: States.h 
 
-#ifndef SMProxyServer_States_h
-#define SMProxyServer_States_h
+#ifndef EventFilter_SMProxyServer_States_h
+#define EventFilter_SMProxyServer_States_h
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
 

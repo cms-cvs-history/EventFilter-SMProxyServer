@@ -1,8 +1,8 @@
-// $Id: EventRetriever.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.2 2011/01/21 15:54:56 mommsen Exp $
 /// @file: EventRetriever.h 
 
-#ifndef SMProxyServer_EventRetriever_h
-#define SMProxyServer_EventRetriever_h
+#ifndef EventFilter_SMProxyServer_EventRetriever_h
+#define EventFilter_SMProxyServer_EventRetriever_h
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
 #include "EventFilter/SMProxyServer/interface/EventQueueCollection.h"
@@ -26,8 +26,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.1 $
-   * $Date: 2011/01/18 15:32:34 $
+   * $Revision: 1.1.2.2 $
+   * $Date: 2011/01/21 15:54:56 $
    */
   
   class EventRetriever
@@ -37,8 +37,8 @@ namespace smproxy {
 
     EventRetriever
     (
-      boost::shared_ptr<stor::InitMsgCollection>,
-      boost::shared_ptr<EventQueueCollection>,
+      stor::InitMsgCollectionPtr,
+      EventQueueCollectionPtr,
       DataRetrieverParams const&,
       edm::ParameterSet const&
     );
@@ -66,8 +66,8 @@ namespace smproxy {
     EventRetriever(EventRetriever const&);
     EventRetriever& operator=(EventRetriever const&);
 
-    boost::shared_ptr<stor::InitMsgCollection> _initMsgCollection;
-    boost::shared_ptr<EventQueueCollection> _eventQueueCollection;
+    stor::InitMsgCollectionPtr _initMsgCollection;
+    EventQueueCollectionPtr _eventQueueCollection;
     const DataRetrieverParams _dataRetrieverParams;
     edm::ParameterSet _pset;
 
@@ -89,7 +89,7 @@ namespace smproxy {
   
 } // namespace smproxy
 
-#endif // SMProxyServer_EventRetriever_h 
+#endif // EventFilter_SMProxyServer_EventRetriever_h 
 
 
 /// emacs configuration

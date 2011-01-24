@@ -1,31 +1,36 @@
-// $Id: DataManager.cc,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.3 2011/01/21 15:54:57 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
+#include "FWCore/Utilities/interface/UnixSignalHandlers.h"
 
 
 namespace smproxy
 {
   DataManager::DataManager
   (
-    boost::shared_ptr<stor::InitMsgCollection> imc,
-    boost::shared_ptr<EventQueueCollection> eqc,
-    boost::shared_ptr<stor::RegistrationQueue> regQueue,
-    DataRetrieverParams const& drp
+    stor::InitMsgCollectionPtr imc,
+    EventQueueCollectionPtr eqc,
+    stor::RegistrationQueuePtr regQueue
   ) :
   _initMsgCollection(imc),
   _eventQueueCollection(eqc),
-  _registrationQueue(regQueue),
-  _dataRetrieverParams(drp)
-  {
-    _thread.reset(
-      new boost::thread( boost::bind( &DataManager::doIt, this) )
-    );
-  }
+  _registrationQueue(regQueue)
+  {}
 
   DataManager::~DataManager()
   {
     stop();
+  }
+  
+  
+  void DataManager::start(DataRetrieverParams const& drp)
+  {
+    _dataRetrieverParams = drp;
+    edm::shutdown_flag = false;
+    _thread.reset(
+      new boost::thread( boost::bind( &DataManager::doIt, this) )
+    );
   }
   
   
@@ -35,6 +40,7 @@ namespace smproxy
     _registrationQueue->enq_wait( stor::RegInfoBasePtr() );
     _thread->join();
 
+    edm::shutdown_flag = true;
     _eventRetrievers.clear();
   }
 
@@ -86,6 +92,8 @@ namespace smproxy
   {
     return false;
   }
+
+  
 
 } // namespace smproxy
   

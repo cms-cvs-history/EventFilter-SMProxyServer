@@ -1,8 +1,8 @@
-// $Id: EventQueueCollection.h,v 1.1.2.1 2011/01/18 15:32:34 mommsen Exp $
+// $Id: EventQueueCollection.h,v 1.1.2.2 2011/01/21 15:54:56 mommsen Exp $
 /// @file: EventQueueCollection.h 
 
-#ifndef SMProxyServer_EventQueueCollection_h
-#define SMProxyServer_EventQueueCollection_h
+#ifndef EventFilter_SMProxyServer_EventQueueCollection_h
+#define EventFilter_SMProxyServer_EventQueueCollection_h
 
 #include "EventFilter/StorageManager/interface/I2OChain.h"
 #include "EventFilter/StorageManager/interface/QueueCollection.h"
@@ -18,8 +18,8 @@ namespace smproxy {
    * A collection of ConcurrentQueue<EventMsgSharedPtr>.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.1 $
-   * $Date: 2011/01/18 15:32:34 $
+   * $Revision: 1.1.2.2 $
+   * $Date: 2011/01/21 15:54:56 $
    */
 
   class EventMsg
@@ -74,7 +74,7 @@ namespace smproxy {
   
 } // namespace smproxy
 
-#endif // SMProxyServer_EventQueueCollection_h 
+#endif // EventFilter_SMProxyServer_EventQueueCollection_h 
 
 
 

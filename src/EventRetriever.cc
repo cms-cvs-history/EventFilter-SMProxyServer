@@ -1,10 +1,12 @@
-// $Id: EventRetriever.cc,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.3 2011/01/21 15:54:57 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/UnixSignalHandlers.h"
+#include "IOPool/Streamer/interface/EventMessage.h"
+#include "IOPool/Streamer/interface/InitMessage.h"
 
 
 namespace smproxy
@@ -14,8 +16,8 @@ namespace smproxy
 
   EventRetriever::EventRetriever
   (
-    boost::shared_ptr<stor::InitMsgCollection> imc,
-    boost::shared_ptr<EventQueueCollection> eqc,
+    stor::InitMsgCollectionPtr imc,
+    EventQueueCollectionPtr eqc,
     DataRetrieverParams const& drp,
     edm::ParameterSet const& pset
   ) :
@@ -47,7 +49,6 @@ namespace smproxy
   
   void EventRetriever::stop()
   {
-    edm::shutdown_flag = true;
     _thread->interrupt();
     _thread->join();
     
@@ -151,10 +152,10 @@ namespace smproxy
 
     if ( edm::shutdown_flag ) return false;
 
-    EventMsgView eventMsgView(&data[0]);
-    if (eventMsgView.code() == Header::DONE) return false;
+    HeaderView headerView(&data[0]);
+    if (headerView.code() == Header::DONE) return false;
     
-    event = EventMsg(eventMsgView);
+    event = EventMsg( EventMsgView(&data[0]) );
     std::cout << "Received event with size " << event.totalDataSize() << std::endl;
 
     return true;
