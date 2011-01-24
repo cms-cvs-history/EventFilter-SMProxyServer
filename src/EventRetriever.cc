@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.3 2011/01/21 15:54:57 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.4 2011/01/24 12:43:17 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -65,23 +65,35 @@ namespace smproxy
 
     while ( !edm::shutdown_flag )
     {
-      if ( _queueIDs.empty() )
-      {
-        boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
-      }
-      else
+      if ( anyActiveConsumers() )
       {
         EventMsg event;
         if ( ! getNextEvent(event) ) break;
-
+        
         {
           boost::mutex::scoped_lock sl(_queueIDsLock);
           event.tagForEventConsumers(_queueIDs);
         }
-
+        
         _eventQueueCollection->addEvent(event);
       }
+      else
+      {
+        boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
+      }
     }
+  }
+  
+  
+  bool EventRetriever::anyActiveConsumers()
+  {
+    {
+      boost::mutex::scoped_lock sl(_queueIDsLock);
+      if ( _queueIDs.empty() ) return false;
+    }
+    
+    stor::utils::time_point_t now = stor::utils::getCurrentTime();
+    return ( ! _eventQueueCollection->allQueuesStale(now) );
   }
   
   

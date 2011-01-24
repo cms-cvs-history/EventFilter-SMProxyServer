@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.3 2011/01/21 15:54:57 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.4 2011/01/24 12:43:17 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -11,16 +11,24 @@ namespace smproxy
   (
     stor::InitMsgCollectionPtr imc,
     EventQueueCollectionPtr eqc,
+    stor::DQMEventQueueCollectionPtr dqc,
     stor::RegistrationQueuePtr regQueue
   ) :
   _initMsgCollection(imc),
   _eventQueueCollection(eqc),
+  _dqmEventQueueCollection(dqc),
   _registrationQueue(regQueue)
-  {}
+  {
+    _watchDogThread.reset(
+      new boost::thread( boost::bind( &DataManager::checkForStaleConsumers, this) )
+    );
+  }
 
   DataManager::~DataManager()
   {
     stop();
+    _watchDogThread->interrupt();
+    _watchDogThread->join();
   }
   
   
@@ -92,8 +100,18 @@ namespace smproxy
   {
     return false;
   }
-
   
+  
+  void DataManager::checkForStaleConsumers()
+  {
+    while (true)
+    {
+      boost::this_thread::sleep(boost::posix_time::seconds(1));
+      stor::utils::time_point_t now = stor::utils::getCurrentTime();
+      _eventQueueCollection->clearStaleQueues(now);
+      _dqmEventQueueCollection->clearStaleQueues(now);
+    }
+  }
 
 } // namespace smproxy
   

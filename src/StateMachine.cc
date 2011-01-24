@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.2 2011/01/21 15:54:57 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
@@ -63,7 +63,8 @@ namespace smproxy
         _statisticsReporter->getDQMConsumerMonitorCollection()));
 
     _dataManager.reset( new DataManager(
-        _initMsgCollection, _eventQueueCollection, _registrationQueue));
+        _initMsgCollection, _eventQueueCollection,
+        _dqmEventQueueCollection, _registrationQueue));
   
     initiate();
   }
