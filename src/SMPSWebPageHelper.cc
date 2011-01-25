@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.5 2011/01/24 14:32:56 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.1 2011/01/25 17:04:15 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
@@ -11,9 +11,9 @@ namespace smproxy
     xdaq::ApplicationDescriptor* appDesc,
     StateMachinePtr stateMachine
   ) :
-  stor::WebPageHelper(appDesc),
+  stor::WebPageHelper(appDesc, "$Name:  $"),
   _stateMachine(stateMachine),
-  _consumerWebPageHelper(appDesc)
+  _consumerWebPageHelper(appDesc, "$Name:  $")
   { }
   
   
