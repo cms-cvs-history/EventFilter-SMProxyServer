@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.4 2011/01/24 14:32:57 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
@@ -26,7 +26,8 @@ namespace smproxy
     app->getApplicationDescriptor(),
     app->getApplicationContext()
   ),
-  _reasonForFailed("")
+  _reasonForFailed(""),
+  _stateName("Halted")
   {
     std::ostringstream oss;
     oss << app->getApplicationDescriptor()->getClassName()

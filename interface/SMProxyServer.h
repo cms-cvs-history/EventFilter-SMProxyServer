@@ -1,14 +1,12 @@
-// $Id: SMProxyServer.h,v 1.22.2.1 2011/01/21 15:54:56 mommsen Exp $
+// $Id: SMProxyServer.h,v 1.22.2.2 2011/01/24 12:43:17 mommsen Exp $
 /// @file: SMProxyServer.h 
 
 #ifndef EventFilter_SMProxyServer_SMProxyServer_h
 #define EventFilter_SMProxyServer_SMProxyServer_h
 
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
+#include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
 #include "EventFilter/StorageManager/interface/ConsumerUtils.h"
-#include "EventFilter/StorageManager/interface/WebPageHelper.h"
-
-#include "FWCore/PluginManager/interface/ProblemTracker.h"
 
 #include "xdaq/Application.h"
 #include "xgi/exception/Exception.h"
@@ -26,8 +24,8 @@ namespace smproxy {
    * Main class of the SMProxyServer XDAQ application
    *
    * $Author: mommsen $
-   * $Revision: 1.22.2.1 $
-   * $Date: 2011/01/21 15:54:56 $
+   * $Revision: 1.22.2.2 $
+   * $Date: 2011/01/24 12:43:17 $
    */
 
   class SMProxyServer: public xdaq::Application
@@ -89,13 +87,6 @@ namespace smproxy {
       throw (xgi::exception::Exception);
 
     /**
-     * Webinterface callback creating web page showing statistics about the
-     * data throughput in the SM.
-     */
-    void throughputWebPage(xgi::Input *in, xgi::Output *out)
-      throw (xgi::exception::Exception);
-
-    /**
      * Bind callbacks for consumers
      */
     void bindConsumerCallbacks();
@@ -140,14 +131,13 @@ namespace smproxy {
      */
     void startWorkerThreads();
 
-    // instantiate the plugin manager, not referenced here after!
-    edm::AssertHandler _ah;
+    StateMachinePtr _stateMachine;
 
-    boost::scoped_ptr<StateMachine> _stateMachine;
-
-    typedef ConsumerUtils<Configuration,EventQueueCollection> ConsumerUtils_t;
+    typedef stor::ConsumerUtils<Configuration,EventQueueCollection> ConsumerUtils_t;
     boost::scoped_ptr<ConsumerUtils_t> _consumerUtils;
-    stor::WebPageHelper _webPageHelper;
+
+    
+    boost::scoped_ptr<SMPSWebPageHelper> _smpsWebPageHelper;
 
   };
 

@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.4 2011/01/24 12:43:17 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.5 2011/01/24 14:32:57 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -87,13 +87,16 @@ namespace smproxy
   
   bool EventRetriever::anyActiveConsumers()
   {
+    boost::mutex::scoped_lock sl(_queueIDsLock);
+    stor::utils::time_point_t now = stor::utils::getCurrentTime();
+    
+    for ( QueueIDs::const_iterator it = _queueIDs.begin(), itEnd = _queueIDs.end();
+          it != itEnd; ++it)
     {
-      boost::mutex::scoped_lock sl(_queueIDsLock);
-      if ( _queueIDs.empty() ) return false;
+      if ( ! _eventQueueCollection->stale(*it, now) ) return true;
     }
     
-    stor::utils::time_point_t now = stor::utils::getCurrentTime();
-    return ( ! _eventQueueCollection->allQueuesStale(now) );
+    return false;
   }
   
   

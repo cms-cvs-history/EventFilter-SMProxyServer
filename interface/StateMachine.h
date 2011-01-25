@@ -1,4 +1,4 @@
-// $Id: StateMachine.h,v 1.1.2.2 2011/01/21 15:54:56 mommsen Exp $
+// $Id: StateMachine.h,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
 /// @file: StateMachine.h 
 
 #ifndef EventFilter_SMProxyServer_StateMachine_h
@@ -80,6 +80,8 @@ namespace smproxy
     void failEvent(const Fail&);
     void unconsumed_event(const boost::statechart::event_base&);
 
+    std::string getReasonForFailed()
+    { return _reasonForFailed; }
     std::string getStateName()
     { return state_cast<const StateName&>().stateName(); }
     std::string getExternallyVisibleStateName()
@@ -131,6 +133,8 @@ namespace smproxy
     
   };
   
+  typedef boost::shared_ptr<StateMachine> StateMachinePtr;
+
 } //namespace smproxy
 
 #endif //SMProxyServer_StateMachine_h

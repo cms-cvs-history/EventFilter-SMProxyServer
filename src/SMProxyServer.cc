@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.134 2010/12/02 15:53:09 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.2.1 2011/01/21 15:54:57 mommsen Exp $
 /// @file: SMProxyServer.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -21,8 +21,7 @@ using namespace smproxy;
 
 
 SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s) :
-  xdaq::Application(s),
-  _webPageHelper( getApplicationDescriptor() )
+  xdaq::Application(s)
 {  
   LOG4CPLUS_INFO(this->getApplicationLogger(),"Making SMProxyServer");
 
@@ -78,7 +77,6 @@ void SMProxyServer::bindWebInterfaceCallbacks()
   xgi::bind(this,&SMProxyServer::defaultWebPage,           "Default");
   xgi::bind(this,&SMProxyServer::dqmEventStatisticsWebPage,"dqmEventStatistics");
   xgi::bind(this,&SMProxyServer::consumerStatisticsPage,   "consumerStatistics" );
-  xgi::bind(this,&SMProxyServer::throughputWebPage,        "throughputStatistics");
 }
 
 
@@ -108,6 +106,9 @@ void SMProxyServer::initializeSharedResources()
       _stateMachine->getDQMEventQueueCollection(),
       _stateMachine->getStatisticsReporter()->alarmHandler()
     ) );
+
+  _smpsWebPageHelper.reset( new SMPSWebPageHelper(
+      getApplicationDescriptor(), _stateMachine));
 }
 
 
@@ -123,7 +124,7 @@ SMProxyServer::~SMProxyServer()
 void SMProxyServer::css(xgi::Input *in, xgi::Output *out)
 throw (xgi::exception::Exception)
 {
-  _webPageHelper.css(in,out);
+  _smpsWebPageHelper->css(in,out);
 }
 
 
@@ -157,9 +158,8 @@ throw (xgi::exception::Exception)
 }
 
 
-void SMProxyServer::consumerStatisticsPage( xgi::Input* in,
-                                             xgi::Output* out )
-  throw( xgi::exception::Exception )
+void SMProxyServer::consumerStatisticsPage(xgi::Input* in, xgi::Output* out)
+throw( xgi::exception::Exception )
 {
 
   std::string err_msg =
@@ -167,8 +167,7 @@ void SMProxyServer::consumerStatisticsPage( xgi::Input* in,
 
   try
   {
-    // _webPageHelper.consumerStatistics( out,
-    //                                    _sharedResources );
+    _smpsWebPageHelper->consumerStatistics(out);
   }
   catch( std::exception &e )
   {
@@ -188,7 +187,7 @@ void SMProxyServer::consumerStatisticsPage( xgi::Input* in,
 
 
 void SMProxyServer::dqmEventStatisticsWebPage(xgi::Input *in, xgi::Output *out)
-  throw (xgi::exception::Exception)
+throw (xgi::exception::Exception)
 {
   std::string errorMsg = "Failed to create the DQM event statistics webpage";
 
@@ -217,37 +216,6 @@ void SMProxyServer::dqmEventStatisticsWebPage(xgi::Input *in, xgi::Output *out)
 }
 
 
-void SMProxyServer::throughputWebPage(xgi::Input *in, xgi::Output *out)
-  throw (xgi::exception::Exception)
-{
-  std::string errorMsg = "Failed to create the throughput statistics webpage";
-
-  try
-  {
-    // _webPageHelper.throughputWebPage(
-    //   out,
-    //   _sharedResources
-    // );
-  }
-  catch(std::exception &e)
-  {
-    errorMsg += ": ";
-    errorMsg += e.what();
-    
-    LOG4CPLUS_ERROR(getApplicationLogger(), errorMsg);
-    XCEPT_RAISE(xgi::exception::Exception, errorMsg);
-  }
-  catch(...)
-  {
-    errorMsg += ": Unknown exception";
-    
-    LOG4CPLUS_ERROR(getApplicationLogger(), errorMsg);
-    XCEPT_RAISE(xgi::exception::Exception, errorMsg);
-  }
-
-}
-
-
 ///////////////////////////////////////
 // State Machine call back functions //
 ///////////////////////////////////////
@@ -260,7 +228,7 @@ xoap::MessageReference SMProxyServer::handleFSMSoapMessage( xoap::MessageReferen
 
   try {
     errorMsg = "Failed to extract FSM event and parameters from SOAP message: ";
-    std::string command = soaputils::extractParameters(msg, this);
+    std::string command = stor::soaputils::extractParameters(msg, this);
     std::string newState = "unknown";  
 
     errorMsg = "Failed to process '" + command + "' state machine event: ";
@@ -287,7 +255,7 @@ xoap::MessageReference SMProxyServer::handleFSMSoapMessage( xoap::MessageReferen
     }
 
     errorMsg = "Failed to create FSM SOAP reply message: ";
-    returnMsg = soaputils::createFsmSoapResponseMsg(command, newState);
+    returnMsg = stor::soaputils::createFsmSoapResponseMsg(command, newState);
   }
   catch (cms::Exception& e) {
     errorMsg += e.explainSelf();
