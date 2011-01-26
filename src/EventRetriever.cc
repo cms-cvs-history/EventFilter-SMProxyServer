@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.5 2011/01/24 14:32:57 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.6 2011/01/25 17:04:15 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -28,6 +28,10 @@ namespace smproxy
   _connected(false),
   _instance(++_retrieverCount)
   {
+    std::ostringstream consumerName;
+    consumerName << "SMPS_" << drp._smpsInstance;
+    _pset.addUntrackedParameter<std::string>("consumerName", consumerName.str());
+
     _thread.reset(
       new boost::thread( boost::bind( &EventRetriever::doIt, this) )
     );
