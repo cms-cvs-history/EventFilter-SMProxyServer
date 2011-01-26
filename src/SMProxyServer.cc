@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.44.2.1 2011/01/21 15:54:57 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.2.2 2011/01/25 17:04:15 mommsen Exp $
 /// @file: SMProxyServer.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -47,6 +47,8 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s) :
     LOG4CPLUS_FATAL( getApplicationLogger(), errorMsg );
     XCEPT_RAISE( stor::exception::Exception, errorMsg );
   }
+
+  startWorkerThreads();
 }
 
 
@@ -112,8 +114,30 @@ void SMProxyServer::initializeSharedResources()
 }
 
 
-SMProxyServer::~SMProxyServer()
+void SMProxyServer::startWorkerThreads()
 {
+  // Start the workloops
+  try
+  {
+    _stateMachine->getStatisticsReporter()->startWorkLoop("theStatisticsReporter");
+  }
+  catch(xcept::Exception &e)
+  {
+    _stateMachine->processEvent( Fail(e) );
+  }
+  catch(std::exception &e)
+  {
+    XCEPT_DECLARE(exception::Exception,
+      sentinelException, e.what());
+    _stateMachine->processEvent( Fail(sentinelException) );
+  }
+  catch(...)
+  {
+    std::string errorMsg = "Unknown exception when starting the workloops";
+    XCEPT_DECLARE(exception::Exception,
+      sentinelException, errorMsg);
+    _stateMachine->processEvent( Fail(sentinelException) );
+  }
 }
 
 
