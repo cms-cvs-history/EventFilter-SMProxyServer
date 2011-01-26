@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.3 2011/01/21 15:54:56 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.4 2011/01/24 12:43:17 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -12,7 +12,7 @@
 #include "xdata/Integer.h"
 #include "xdata/UnsignedInteger32.h"
 #include "xdata/Double.h"
-//#include "xdata/Boolean.h"
+#include "xdata/Boolean.h"
 #include "xdata/Vector.h"
 
 #include "boost/thread/mutex.hpp"
@@ -28,6 +28,7 @@ namespace smproxy
   {
     typedef std::vector<std::string> SMRegistrationList;
     SMRegistrationList _smRegistrationList;
+    bool _allowMissingSM;
     stor::utils::duration_t _sleepTimeIfIdle;
 
     // not mapped to infospace params
@@ -51,8 +52,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.3 $
-   * $Date: 2011/01/21 15:54:56 $
+   * $Revision: 1.1.2.4 $
+   * $Date: 2011/01/24 12:43:17 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -140,6 +141,7 @@ namespace smproxy
     unsigned int _localRunNumber;
     
     xdata::Vector<xdata::String> _smRegistrationList;
+    xdata::Boolean _allowMissingSM;
     xdata::UnsignedInteger32 _sleepTimeIfIdle;  // milliseconds
     
     xdata::Integer _activeConsumerTimeout;  // seconds

@@ -1,7 +1,8 @@
-// $Id: EventRetriever.cc,v 1.1.2.6 2011/01/25 17:04:15 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.7 2011/01/26 11:15:10 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
+#include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/UnixSignalHandlers.h"
@@ -19,18 +20,23 @@ namespace smproxy
     stor::InitMsgCollectionPtr imc,
     EventQueueCollectionPtr eqc,
     DataRetrieverParams const& drp,
+    DataRetrieverMonitorCollection& drmc,
     edm::ParameterSet const& pset
   ) :
   _initMsgCollection(imc),
   _eventQueueCollection(eqc),
   _dataRetrieverParams(drp),
+  _dataRetrieverMonitorCollection(drmc),
   _pset(pset),
+  _minEventRequestInterval(boost::posix_time::not_a_date_time),
   _connected(false),
   _instance(++_retrieverCount)
   {
     std::ostringstream consumerName;
     consumerName << "SMPS_" << drp._smpsInstance;
     _pset.addUntrackedParameter<std::string>("consumerName", consumerName.str());
+
+    _nextRequestTime = stor::utils::getCurrentTime();
 
     _thread.reset(
       new boost::thread( boost::bind( &EventRetriever::doIt, this) )
@@ -44,10 +50,26 @@ namespace smproxy
   }
   
   
-  void EventRetriever::addQueue(const stor::QueueID& qid)
+  void EventRetriever::addConsumer(stor::EventConsRegPtr consumer)
   {
+    stor::utils::duration_t newMinEventRequestInterval =
+      consumer->minEventRequestInterval();
+
+    // Only update the _minEventRequestInterval if the new
+    // consumer specifies a shorter interval than any other
+    // consumer. If there's already a consumer not specifying
+    // an update interval, leave it unspecified.
+    if ( ! newMinEventRequestInterval.is_not_a_date_time() &&
+      ! _minEventRequestInterval.is_not_a_date_time() &&
+      newMinEventRequestInterval < _minEventRequestInterval )
+    {
+      // correct next request time for the shorter interval
+      _nextRequestTime -= (_minEventRequestInterval - newMinEventRequestInterval);
+      _minEventRequestInterval = newMinEventRequestInterval;
+    }
+
     boost::mutex::scoped_lock sl(_queueIDsLock);
-    _queueIDs.push_back(qid);
+    _queueIDs.push_back(consumer->queueId());
   }
   
   
@@ -127,14 +149,27 @@ namespace smproxy
       }
       catch (cms::Exception& e)
       {
-        edm::LogInfo("EventRetriever") << "Failed to connect to SM on " << 
+        std::ostringstream errorMsg;
+        errorMsg << "Failed to connect to SM on " << 
           _dataRetrieverParams._smRegistrationList[smInstance];
+
+        if ( _dataRetrieverParams._allowMissingSM )
+        {
+          edm::LogInfo("EventRetriever") << errorMsg;
+        }
+        else
+        {
+          XCEPT_RAISE(exception::DataRetrieval, errorMsg.str());
+        }
       }
     }
     // start with the first SM in our list
     _nextSMtoUse = _eventServers.begin();
 
-    return (_eventServers.size() == smCount);
+    size_t connectedSM = _eventServers.size();
+    _dataRetrieverMonitorCollection.getEventConnectionCountMQ().addSample(connectedSM);
+
+    return (connectedSM == smCount);
   }
   
   
@@ -150,6 +185,8 @@ namespace smproxy
   
   bool EventRetriever::getNextEvent(EventMsg& event)
   {
+    stor::utils::sleepUntil(_nextRequestTime);
+
     std::string data;
     size_t tries = 0;
 
@@ -175,7 +212,11 @@ namespace smproxy
     if (headerView.code() == Header::DONE) return false;
     
     event = EventMsg( EventMsgView(&data[0]) );
-    std::cout << "Received event with size " << event.totalDataSize() << std::endl;
+    _dataRetrieverMonitorCollection.getEventSizeMQ().addSample(
+      static_cast<double>( event.totalDataSize() ) / 0x100000 );
+
+    if ( ! _minEventRequestInterval.is_not_a_date_time() )
+      _nextRequestTime = stor::utils::getCurrentTime() + _minEventRequestInterval;
 
     return true;
   }

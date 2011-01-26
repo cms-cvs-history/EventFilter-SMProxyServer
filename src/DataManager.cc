@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.4 2011/01/24 12:43:17 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.5 2011/01/24 14:32:56 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -12,12 +12,14 @@ namespace smproxy
     stor::InitMsgCollectionPtr imc,
     EventQueueCollectionPtr eqc,
     stor::DQMEventQueueCollectionPtr dqc,
-    stor::RegistrationQueuePtr regQueue
+    stor::RegistrationQueuePtr regQueue,
+    DataRetrieverMonitorCollection& drmc
   ) :
   _initMsgCollection(imc),
   _eventQueueCollection(eqc),
   _dqmEventQueueCollection(dqc),
-  _registrationQueue(regQueue)
+  _registrationQueue(regQueue),
+  _dataRetrieverMonitorCollection(drmc)
   {
     _watchDogThread.reset(
       new boost::thread( boost::bind( &DataManager::checkForStaleConsumers, this) )
@@ -84,13 +86,14 @@ namespace smproxy
       // no retriever found for this event requests
       EventRetrieverPtr eventRetriever(
         new EventRetriever(_initMsgCollection, _eventQueueCollection,
-          _dataRetrieverParams, eventConsumer->getPSet())
+          _dataRetrieverParams, _dataRetrieverMonitorCollection,
+          eventConsumer->getPSet())
       );
       pos = _eventRetrievers.insert(pos,
         EventRetrieverMap::value_type(eventConsumer, eventRetriever));
     }
 
-    pos->second->addQueue( eventConsumer->queueId() );
+    pos->second->addConsumer( eventConsumer );
     
     return true;
   }

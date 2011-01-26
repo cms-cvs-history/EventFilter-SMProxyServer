@@ -1,4 +1,4 @@
-// $Id: Exception.h,v 1.1.2.2 2011/01/21 15:54:56 mommsen Exp $
+// $Id: Exception.h,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
 /// @file: Exception.h 
 
 #ifndef EventFilter_SMProxyServer_Exception_h
@@ -13,8 +13,8 @@ namespace smproxy {
      List of exceptions thrown by the SMProxyServer
 
      $Author: mommsen $
-     $Revision: 1.1.2.2 $
-     $Date: 2011/01/21 15:54:56 $
+     $Revision: 1.1.2.3 $
+     $Date: 2011/01/24 12:43:17 $
   */
 }
 
@@ -47,6 +47,11 @@ XCEPT_DEFINE_EXCEPTION(smproxy, Configuration)
  * Exception raised when a non-existant queue is requested.
  */
 XCEPT_DEFINE_EXCEPTION(smproxy, UnknownQueueId)
+
+/**
+ * Data retrieving problem
+ */
+XCEPT_DEFINE_EXCEPTION(smproxy, DataRetrieval)
 
 /**
  * Consumer registration exception

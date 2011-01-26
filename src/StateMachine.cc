@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.5 2011/01/25 17:04:15 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.6 2011/01/26 11:15:41 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
@@ -57,17 +57,16 @@ namespace smproxy
     _statisticsReporter.reset(new StatisticsReporter(app,
         _configuration->getQueueConfigurationParams()));
 
-    stor::EventConsumerMonitorCollection& ecmc =
-      _statisticsReporter->getEventConsumerMonitorCollection();
-    _eventQueueCollection.reset(new EventQueueCollection(ecmc));
-
-    stor::DQMConsumerMonitorCollection& dcmc =
-      _statisticsReporter->getDQMConsumerMonitorCollection();
-    _dqmEventQueueCollection.reset(new stor::DQMEventQueueCollection(dcmc));
-
+    _eventQueueCollection.reset(new EventQueueCollection(
+        _statisticsReporter->getEventConsumerMonitorCollection()));
+    
+    _dqmEventQueueCollection.reset(new stor::DQMEventQueueCollection(
+        _statisticsReporter->getDQMConsumerMonitorCollection()));
+    
     _dataManager.reset( new DataManager(
         _initMsgCollection, _eventQueueCollection,
-        _dqmEventQueueCollection, _registrationQueue));
+        _dqmEventQueueCollection, _registrationQueue,
+        _statisticsReporter->getDataRetrieverMonitorCollection()));
   
     initiate();
   }

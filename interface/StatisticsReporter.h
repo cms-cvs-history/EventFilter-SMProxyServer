@@ -1,4 +1,4 @@
-// $Id: StatisticsReporter.h,v 1.1.2.1 2011/01/21 15:54:56 mommsen Exp $
+// $Id: StatisticsReporter.h,v 1.1.2.2 2011/01/24 12:43:17 mommsen Exp $
 /// @file: StatisticsReporter.h 
 
 #ifndef EventFilter_SMProxyServer_StatisticsReporter_h
@@ -10,6 +10,7 @@
 #include "xdata/InfoSpace.h"
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
+#include "EventFilter/SMProxyServer/interface/DataRetrieverMonitorCollection.h"
 #include "EventFilter/StorageManager/interface/AlarmHandler.h"
 #include "EventFilter/StorageManager/interface/EventConsumerMonitorCollection.h"
 #include "EventFilter/StorageManager/interface/DQMConsumerMonitorCollection.h"
@@ -34,8 +35,8 @@ namespace smproxy {
    * statistics for all MonitorCollections.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.1 $
-   * $Date: 2011/01/21 15:54:56 $
+   * $Revision: 1.1.2.2 $
+   * $Date: 2011/01/24 12:43:17 $
    */
   
   class StatisticsReporter : public toolbox::lang::Class, public xdata::ActionListener
@@ -49,6 +50,12 @@ namespace smproxy {
     );
     
     virtual ~StatisticsReporter();
+
+    const DataRetrieverMonitorCollection& getDataRetrieverMonitorCollection() const
+    { return _dataRetrieverMonCollection; }
+
+    DataRetrieverMonitorCollection& getDataRetrieverMonitorCollection()
+    { return _dataRetrieverMonCollection; }
 
     const stor::DQMEventMonitorCollection& getDQMEventMonitorCollection() const
     { return _dqmEventMonCollection; }
@@ -112,6 +119,7 @@ namespace smproxy {
     stor::utils::duration_t _monitoringSleepSec;
     stor::utils::time_point_t _lastMonitorAction;
 
+    DataRetrieverMonitorCollection _dataRetrieverMonCollection;
     stor::DQMEventMonitorCollection _dqmEventMonCollection;
     stor::EventConsumerMonitorCollection _eventConsumerMonCollection;
     stor::DQMConsumerMonitorCollection _dqmConsumerMonCollection;

@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.2 2011/01/19 16:22:02 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.3 2011/01/21 15:54:57 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -62,6 +62,7 @@ namespace smproxy
   {
     _dataRetrieverParamCopy._smpsInstance = instanceNumber;
     _dataRetrieverParamCopy._smRegistrationList.clear();
+    _dataRetrieverParamCopy._allowMissingSM = true;
     _dataRetrieverParamCopy._sleepTimeIfIdle =
       boost::posix_time::milliseconds(100);
 
@@ -106,11 +107,13 @@ namespace smproxy
   {
     // copy the initial defaults into the xdata variables
     stor::utils::getXdataVector(_dataRetrieverParamCopy._smRegistrationList, _smRegistrationList);
+    _allowMissingSM = _dataRetrieverParamCopy._allowMissingSM;
     _sleepTimeIfIdle = _dataRetrieverParamCopy._sleepTimeIfIdle.total_milliseconds();
 
     // bind the local xdata variables to the infospace
     infoSpace->fireItemAvailable("SMRegistrationList", &_smRegistrationList);
-    infoSpace->fireItemAvailable("SleepTimeIfIdle", &_sleepTimeIfIdle);
+    infoSpace->fireItemAvailable("allowMissingSM", &_allowMissingSM);
+    infoSpace->fireItemAvailable("sleepTimeIfIdle", &_sleepTimeIfIdle);
   }
   
   void Configuration::
@@ -154,6 +157,7 @@ namespace smproxy
   void Configuration::updateLocalDataRetrieverData()
   {
     stor::utils::getStdVector(_smRegistrationList, _dataRetrieverParamCopy._smRegistrationList);
+    _dataRetrieverParamCopy._allowMissingSM = _allowMissingSM;
     _dataRetrieverParamCopy._sleepTimeIfIdle =
       boost::posix_time::milliseconds(_sleepTimeIfIdle);
   }

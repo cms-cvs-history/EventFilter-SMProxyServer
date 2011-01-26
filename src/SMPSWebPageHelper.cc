@@ -1,7 +1,8 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.1 2011/01/25 17:04:15 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.2 2011/01/25 17:22:24 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
+#include "EventFilter/StorageManager/src/ConsumerWebPageHelper.icc"
 
 
 namespace smproxy

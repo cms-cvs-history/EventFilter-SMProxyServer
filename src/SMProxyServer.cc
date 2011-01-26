@@ -1,10 +1,11 @@
-// $Id: SMProxyServer.cc,v 1.44.2.2 2011/01/25 17:04:15 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.2.3 2011/01/26 11:15:40 mommsen Exp $
 /// @file: SMProxyServer.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/SMProxyServer.h"
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "EventFilter/StorageManager/interface/SoapUtils.h"
+#include "EventFilter/StorageManager/src/ConsumerUtils.icc"
 
 #include "FWCore/Utilities/interface/EDMException.h"
 

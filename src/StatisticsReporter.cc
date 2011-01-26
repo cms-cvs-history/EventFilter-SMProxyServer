@@ -1,4 +1,4 @@
-// $Id: StatisticsReporter.cc,v 1.20 2010/12/14 12:56:52 mommsen Exp $
+// $Id: StatisticsReporter.cc,v 1.1.2.1 2011/01/21 15:54:57 mommsen Exp $
 /// @file: StatisticsReporter.cc
 
 #include <sstream>
@@ -27,6 +27,7 @@ StatisticsReporter::StatisticsReporter
 _app(app),
 _alarmHandler(new stor::AlarmHandler(app)),
 _monitoringSleepSec(qcp._monitoringSleepSec),
+_dataRetrieverMonCollection(_monitoringSleepSec),
 _dqmEventMonCollection(_monitoringSleepSec*5),
 _eventConsumerMonCollection(_monitoringSleepSec),
 _dqmConsumerMonCollection(_monitoringSleepSec),
@@ -118,6 +119,7 @@ void StatisticsReporter::collectInfoSpaceItems()
   stor::MonitorCollection::InfoSpaceItems infoSpaceItems;
   _infoSpaceItemNames.clear();
 
+  _dataRetrieverMonCollection.appendInfoSpaceItems(infoSpaceItems);
   _dqmEventMonCollection.appendInfoSpaceItems(infoSpaceItems);
   _eventConsumerMonCollection.appendInfoSpaceItems(infoSpaceItems);
   _dqmConsumerMonCollection.appendInfoSpaceItems(infoSpaceItems);
@@ -208,6 +210,7 @@ void StatisticsReporter::calculateStatistics()
 {
   const stor::utils::time_point_t now = stor::utils::getCurrentTime();
 
+  _dataRetrieverMonCollection.calculateStatistics(now);
   _dqmEventMonCollection.calculateStatistics(now);
   _eventConsumerMonCollection.calculateStatistics(now);
   _dqmConsumerMonCollection.calculateStatistics(now);
@@ -224,6 +227,7 @@ void StatisticsReporter::updateInfoSpace()
   {
     _infoSpace->lock();
 
+    _dataRetrieverMonCollection.updateInfoSpaceItems();
     _dqmEventMonCollection.updateInfoSpaceItems();
     _eventConsumerMonCollection.updateInfoSpaceItems();
     _dqmConsumerMonCollection.updateInfoSpaceItems();
@@ -262,6 +266,7 @@ void StatisticsReporter::reset()
 {
   const stor::utils::time_point_t now = stor::utils::getCurrentTime();
 
+  _dataRetrieverMonCollection.reset(now);
   _dqmEventMonCollection.reset(now);
   _eventConsumerMonCollection.reset(now);
   _dqmConsumerMonCollection.reset(now);

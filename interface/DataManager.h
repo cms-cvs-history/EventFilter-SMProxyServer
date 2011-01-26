@@ -1,10 +1,11 @@
-// $Id: DataManager.h,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
+// $Id: DataManager.h,v 1.1.2.4 2011/01/24 14:32:56 mommsen Exp $
 /// @file: DataManager.h 
 
 #ifndef EventFilter_SMProxyServer_DataManager_h
 #define EventFilter_SMProxyServer_DataManager_h
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
+#include "EventFilter/SMProxyServer/interface/DataRetrieverMonitorCollection.h"
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
 #include "EventFilter/SMProxyServer/interface/EventQueueCollection.h"
 #include "EventFilter/StorageManager/interface/DQMEventQueueCollection.h"
@@ -27,8 +28,8 @@ namespace smproxy {
    * Manages the data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.3 $
-   * $Date: 2011/01/24 12:43:17 $
+   * $Revision: 1.1.2.4 $
+   * $Date: 2011/01/24 14:32:56 $
    */
   
   class DataManager
@@ -40,7 +41,8 @@ namespace smproxy {
       stor::InitMsgCollectionPtr,
       EventQueueCollectionPtr,
       stor::DQMEventQueueCollectionPtr,
-      stor::RegistrationQueuePtr
+      stor::RegistrationQueuePtr,
+      DataRetrieverMonitorCollection&
     );
 
     ~DataManager();
@@ -67,6 +69,7 @@ namespace smproxy {
     EventQueueCollectionPtr _eventQueueCollection;
     stor::DQMEventQueueCollectionPtr _dqmEventQueueCollection;
     stor::RegistrationQueuePtr _registrationQueue;
+    DataRetrieverMonitorCollection& _dataRetrieverMonitorCollection;
     DataRetrieverParams _dataRetrieverParams;
 
     boost::scoped_ptr<boost::thread> _thread;
