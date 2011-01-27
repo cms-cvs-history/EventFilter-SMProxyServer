@@ -1,6 +1,7 @@
-// $Id: StateMachine.cc,v 1.1.2.6 2011/01/26 11:15:41 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.7 2011/01/26 16:06:54 mommsen Exp $
 /// @file: StateMachine.cc
 
+#include "EventFilter/SMProxyServer/interface/DataManager.h"
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "EventFilter/SMProxyServer/interface/States.h"
 #include "EventFilter/StorageManager/interface/EventConsumerMonitorCollection.h"
@@ -41,6 +42,8 @@ namespace smproxy
       _rcmsStateNotifier.getFoundRcmsStateListenerParameter() );
     _rcmsStateNotifier.findRcmsStateListener();
     _rcmsStateNotifier.subscribeToChangesInRcmsStateListener(is);
+  
+    initiate();
 
     _configuration.reset(new Configuration(
         app->getApplicationInfoSpace(), app->getApplicationDescriptor()->getInstance()
@@ -63,12 +66,7 @@ namespace smproxy
     _dqmEventQueueCollection.reset(new stor::DQMEventQueueCollection(
         _statisticsReporter->getDQMConsumerMonitorCollection()));
     
-    _dataManager.reset( new DataManager(
-        _initMsgCollection, _eventQueueCollection,
-        _dqmEventQueueCollection, _registrationQueue,
-        _statisticsReporter->getDataRetrieverMonitorCollection()));
-  
-    initiate();
+    _dataManager.reset(new DataManager(this));
   }
   
   

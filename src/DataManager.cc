@@ -1,7 +1,9 @@
-// $Id: DataManager.cc,v 1.1.2.5 2011/01/24 14:32:56 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.6 2011/01/26 16:06:54 mommsen Exp $
 /// @file: DataManager.cc
 
+#include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
+#include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "FWCore/Utilities/interface/UnixSignalHandlers.h"
 
 
@@ -9,17 +11,10 @@ namespace smproxy
 {
   DataManager::DataManager
   (
-    stor::InitMsgCollectionPtr imc,
-    EventQueueCollectionPtr eqc,
-    stor::DQMEventQueueCollectionPtr dqc,
-    stor::RegistrationQueuePtr regQueue,
-    DataRetrieverMonitorCollection& drmc
+    StateMachine* stateMachine
   ) :
-  _initMsgCollection(imc),
-  _eventQueueCollection(eqc),
-  _dqmEventQueueCollection(dqc),
-  _registrationQueue(regQueue),
-  _dataRetrieverMonitorCollection(drmc)
+  _stateMachine(stateMachine),
+  _registrationQueue(stateMachine->getRegistrationQueue())
   {
     _watchDogThread.reset(
       new boost::thread( boost::bind( &DataManager::checkForStaleConsumers, this) )
@@ -53,8 +48,34 @@ namespace smproxy
     edm::shutdown_flag = true;
     _eventRetrievers.clear();
   }
-
-
+  
+  
+  void DataManager::activity()
+  {
+    try
+    {
+      doIt();
+    }
+    catch(xcept::Exception &e)
+    {
+      _stateMachine->processEvent( Fail(e) );
+    }
+    catch(std::exception &e)
+    {
+      XCEPT_DECLARE(exception::Exception,
+        sentinelException, e.what());
+      _stateMachine->processEvent( Fail(sentinelException) );
+    }
+    catch(...)
+    {
+      std::string errorMsg = "Unknown exception in watch dog";
+      XCEPT_DECLARE(exception::Exception,
+        sentinelException, errorMsg);
+      _stateMachine->processEvent( Fail(sentinelException) );
+    }
+  }
+  
+  
   void DataManager::doIt()
   {
     stor::RegInfoBasePtr regInfo;
@@ -85,9 +106,7 @@ namespace smproxy
     {
       // no retriever found for this event requests
       EventRetrieverPtr eventRetriever(
-        new EventRetriever(_initMsgCollection, _eventQueueCollection,
-          _dataRetrieverParams, _dataRetrieverMonitorCollection,
-          eventConsumer->getPSet())
+        new EventRetriever(_stateMachine, eventConsumer->getPSet())
       );
       pos = _eventRetrievers.insert(pos,
         EventRetrieverMap::value_type(eventConsumer, eventRetriever));
@@ -105,14 +124,49 @@ namespace smproxy
   }
   
   
+  void DataManager::watchDog()
+  {
+    try
+    {
+      checkForStaleConsumers();
+    }
+    catch(boost::thread_interrupted)
+    {
+      // thread was interrupted.
+    }
+    catch(xcept::Exception &e)
+    {
+      _stateMachine->processEvent( Fail(e) );
+    }
+    catch(std::exception &e)
+    {
+      XCEPT_DECLARE(exception::Exception,
+        sentinelException, e.what());
+      _stateMachine->processEvent( Fail(sentinelException) );
+    }
+    catch(...)
+    {
+      std::string errorMsg = "Unknown exception in watch dog";
+      XCEPT_DECLARE(exception::Exception,
+        sentinelException, errorMsg);
+      _stateMachine->processEvent( Fail(sentinelException) );
+    }
+  }
+  
+  
   void DataManager::checkForStaleConsumers()
   {
+    EventQueueCollectionPtr eventQueueCollection =
+      _stateMachine->getEventQueueCollection();
+    stor::DQMEventQueueCollectionPtr dqmEventQueueCollection =
+      _stateMachine->getDQMEventQueueCollection();
+    
     while (true)
     {
       boost::this_thread::sleep(boost::posix_time::seconds(1));
       stor::utils::time_point_t now = stor::utils::getCurrentTime();
-      _eventQueueCollection->clearStaleQueues(now);
-      _dqmEventQueueCollection->clearStaleQueues(now);
+      eventQueueCollection->clearStaleQueues(now);
+      dqmEventQueueCollection->clearStaleQueues(now);
     }
   }
 

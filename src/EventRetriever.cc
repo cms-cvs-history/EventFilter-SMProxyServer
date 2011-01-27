@@ -1,8 +1,9 @@
-// $Id: EventRetriever.cc,v 1.1.2.7 2011/01/26 11:15:10 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.8 2011/01/26 16:06:54 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
 #include "EventFilter/SMProxyServer/interface/Exception.h"
+#include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/UnixSignalHandlers.h"
@@ -17,29 +18,35 @@ namespace smproxy
 
   EventRetriever::EventRetriever
   (
-    stor::InitMsgCollectionPtr imc,
-    EventQueueCollectionPtr eqc,
-    DataRetrieverParams const& drp,
-    DataRetrieverMonitorCollection& drmc,
+    StateMachine* stateMachine,
     edm::ParameterSet const& pset
   ) :
-  _initMsgCollection(imc),
-  _eventQueueCollection(eqc),
-  _dataRetrieverParams(drp),
-  _dataRetrieverMonitorCollection(drmc),
+  _stateMachine(stateMachine),
   _pset(pset),
+  _dataRetrieverParams(stateMachine->getConfiguration()->getDataRetrieverParams()),
+  _dataRetrieverMonitorCollection(stateMachine->getStatisticsReporter()->getDataRetrieverMonitorCollection()),
   _minEventRequestInterval(boost::posix_time::not_a_date_time),
-  _connected(false),
   _instance(++_retrieverCount)
   {
     std::ostringstream consumerName;
-    consumerName << "SMPS_" << drp._smpsInstance;
+    consumerName << "SMPS_" << _dataRetrieverParams._smpsInstance;
     _pset.addUntrackedParameter<std::string>("consumerName", consumerName.str());
+
+    if ( _dataRetrieverParams._allowMissingSM )
+    {
+      _pset.addUntrackedParameter<int>("maxConnectTries", 0);
+    }
+    else
+    {
+      _pset.addUntrackedParameter<int>("maxConnectTries", _dataRetrieverParams._maxConnectionRetries);
+      _pset.addUntrackedParameter<int>("connectTrySleepTime", _dataRetrieverParams._connectTrySleepTime);
+    }
+    _pset.addUntrackedParameter<int>("headerRetryInterval", _dataRetrieverParams._headerRetryInterval);
 
     _nextRequestTime = stor::utils::getCurrentTime();
 
     _thread.reset(
-      new boost::thread( boost::bind( &EventRetriever::doIt, this) )
+      new boost::thread( boost::bind( &EventRetriever::activity, this) )
     );
   }
   
@@ -81,7 +88,36 @@ namespace smproxy
     boost::mutex::scoped_lock sl(_queueIDsLock);
     _queueIDs.clear();
   }
+    
   
+  void EventRetriever::activity()
+  {
+    try
+    {
+      doIt();
+    }
+    catch(boost::thread_interrupted)
+    {
+      // thread was interrupted.
+    }
+    catch(xcept::Exception &e)
+    {
+      _stateMachine->processEvent( Fail(e) );
+    }
+    catch(std::exception &e)
+    {
+      XCEPT_DECLARE(exception::Exception,
+        sentinelException, e.what());
+      _stateMachine->processEvent( Fail(sentinelException) );
+    }
+    catch(...)
+    {
+      std::string errorMsg = "Unknown exception while retrieving events";
+      XCEPT_DECLARE(exception::Exception,
+        sentinelException, errorMsg);
+      _stateMachine->processEvent( Fail(sentinelException) );
+    }
+  }
   
   void EventRetriever::doIt()
   {
@@ -89,9 +125,12 @@ namespace smproxy
 
     getInitMsg();
 
+    EventQueueCollectionPtr eventQueueCollection =
+      _stateMachine->getEventQueueCollection();
+
     while ( !edm::shutdown_flag )
     {
-      if ( anyActiveConsumers() )
+      if ( anyActiveConsumers(eventQueueCollection) )
       {
         EventMsg event;
         if ( ! getNextEvent(event) ) break;
@@ -101,7 +140,7 @@ namespace smproxy
           event.tagForEventConsumers(_queueIDs);
         }
         
-        _eventQueueCollection->addEvent(event);
+        eventQueueCollection->addEvent(event);
       }
       else
       {
@@ -111,7 +150,7 @@ namespace smproxy
   }
   
   
-  bool EventRetriever::anyActiveConsumers()
+  bool EventRetriever::anyActiveConsumers(EventQueueCollectionPtr eventQueueCollection)
   {
     boost::mutex::scoped_lock sl(_queueIDsLock);
     stor::utils::time_point_t now = stor::utils::getCurrentTime();
@@ -119,7 +158,7 @@ namespace smproxy
     for ( QueueIDs::const_iterator it = _queueIDs.begin(), itEnd = _queueIDs.end();
           it != itEnd; ++it)
     {
-      if ( ! _eventQueueCollection->stale(*it, now) ) return true;
+      if ( ! eventQueueCollection->stale(*it, now) ) return true;
     }
     
     return false;
@@ -138,38 +177,50 @@ namespace smproxy
       
       // each event retriever shall start from a different SM
       size_t smInstance = (_instance + i) % smCount;
-      _pset.addParameter<std::string>("sourceURL",
-        _dataRetrieverParams._smRegistrationList[smInstance]);
+      std::string sourceURL = _dataRetrieverParams._smRegistrationList[smInstance];
 
-      try
-      {
-        EventServerPtr eventServerPtr(new stor::EventServerProxy(_pset));
-        _eventServers.push_back(eventServerPtr);
-        _connected = true;
-      }
-      catch (cms::Exception& e)
+      std::pair<ConnectedSMs::const_iterator,bool> ret =
+        _connectedSMs.insert(ConnectedSMs::value_type(sourceURL,false));
+      if ( ! ret.second )
       {
         std::ostringstream errorMsg;
-        errorMsg << "Failed to connect to SM on " << 
-          _dataRetrieverParams._smRegistrationList[smInstance];
-
-        if ( _dataRetrieverParams._allowMissingSM )
-        {
-          edm::LogInfo("EventRetriever") << errorMsg;
-        }
-        else
-        {
-          XCEPT_RAISE(exception::DataRetrieval, errorMsg.str());
-        }
+        errorMsg << "Duplicated entry in smRegistrationList: " << sourceURL;
+        XCEPT_RAISE(exception::Configuration, errorMsg.str());
       }
+      
+      connectToSM(sourceURL);
     }
+
+    if ( _eventServers.empty() )
+    {
+      XCEPT_RAISE(exception::DataRetrieval, "Could not connect to any SM");
+    }
+    
     // start with the first SM in our list
     _nextSMtoUse = _eventServers.begin();
 
     size_t connectedSM = _eventServers.size();
     _dataRetrieverMonitorCollection.getEventConnectionCountMQ().addSample(connectedSM);
-
+    
     return (connectedSM == smCount);
+  }
+  
+  
+  void EventRetriever::connectToSM(const std::string& sourceURL)
+  try
+  {
+    _pset.addParameter<std::string>("sourceURL", sourceURL);
+    EventServerPtr eventServerPtr(new stor::EventServerProxy(_pset));
+    _eventServers.push_back(eventServerPtr);
+    _connectedSMs[sourceURL] = true;
+  }
+  catch (cms::Exception& e)
+  {
+    std::ostringstream errorMsg;
+    errorMsg << "Failed to connect to SM on " << sourceURL;
+    
+    if ( ! _dataRetrieverParams._allowMissingSM )
+      XCEPT_RAISE(exception::DataRetrieval, errorMsg.str());
   }
   
   
@@ -179,7 +230,7 @@ namespace smproxy
     (*_nextSMtoUse)->getInitMsg(data);
 
     InitMsgView initMsgView(&data[0]);
-    _initMsgCollection->addIfUnique(initMsgView);
+    _stateMachine->getInitMsgCollection()->addIfUnique(initMsgView);
   }
   
   
