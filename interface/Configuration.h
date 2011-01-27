@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.4 2011/01/24 12:43:17 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.5 2011/01/26 16:06:54 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -29,6 +29,9 @@ namespace smproxy
     typedef std::vector<std::string> SMRegistrationList;
     SMRegistrationList _smRegistrationList;
     bool _allowMissingSM;
+    uint32_t _maxConnectionRetries;
+    uint32_t _connectTrySleepTime;
+    uint32_t _headerRetryInterval;
     stor::utils::duration_t _sleepTimeIfIdle;
 
     // not mapped to infospace params
@@ -42,7 +45,7 @@ namespace smproxy
    */
   struct QueueConfigurationParams
   {
-    unsigned int _registrationQueueSize;
+    uint32_t _registrationQueueSize;
     stor::utils::duration_t _monitoringSleepSec;
   };
 
@@ -52,8 +55,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.4 $
-   * $Date: 2011/01/24 12:43:17 $
+   * $Revision: 1.1.2.5 $
+   * $Date: 2011/01/26 16:06:54 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -89,6 +92,13 @@ namespace smproxy
     struct DataRetrieverParams getDataRetrieverParams() const;
 
     /**
+     * Returns a copy of the DQM processing parameters.  These values
+     * will be current as of the most recent global update of the local
+     * cache from the infospace (see the updateAllParams() method).
+     */
+    struct stor::DQMProcessingParams getDQMProcessingParams() const;
+
+    /**
      * Returns a copy of the event serving parameters.  These values
      * will be current as of the most recent global update of the local
      * cache from the infospace (see the updateAllParams() method).
@@ -118,20 +128,24 @@ namespace smproxy
   private:
 
     void setDataRetrieverDefaults(unsigned long instanceNumber);
+    void setDQMProcessingDefaults();
     void setEventServingDefaults();
     void setQueueConfigurationDefaults();
 
-    void setupRunInfoSpaceParams(xdata::InfoSpace* infoSpace);
-    void setupDataRetrieverInfoSpaceParams(xdata::InfoSpace* infoSpace);
-    void setupEventServingInfoSpaceParams(xdata::InfoSpace* infoSpace);
-    void setupQueueConfigurationInfoSpaceParams(xdata::InfoSpace* infoSpace);
+    void setupRunInfoSpaceParams(xdata::InfoSpace*);
+    void setupDataRetrieverInfoSpaceParams(xdata::InfoSpace*);
+    void setupDQMProcessingInfoSpaceParams(xdata::InfoSpace*);
+    void setupEventServingInfoSpaceParams(xdata::InfoSpace*);
+    void setupQueueConfigurationInfoSpaceParams(xdata::InfoSpace*);
 
     void updateLocalRunData();
     void updateLocalDataRetrieverData();
+    void updateLocalDQMProcessingData();
     void updateLocalEventServingData();
     void updateLocalQueueConfigurationData();
 
     struct DataRetrieverParams _dataRetrieverParamCopy;
+    struct stor::DQMProcessingParams _dqmParamCopy;
     struct stor::EventServingParams _eventServeParamCopy;
     struct QueueConfigurationParams _queueConfigParamCopy;
 
@@ -142,7 +156,19 @@ namespace smproxy
     
     xdata::Vector<xdata::String> _smRegistrationList;
     xdata::Boolean _allowMissingSM;
+    xdata::UnsignedInteger32 _maxConnectionRetries;
+    xdata::UnsignedInteger32 _connectTrySleepTime; // seconds
+    xdata::UnsignedInteger32 _headerRetryInterval; // seconds
     xdata::UnsignedInteger32 _sleepTimeIfIdle;  // milliseconds
+
+    xdata::Boolean _collateDQM;
+    xdata::Boolean _archiveDQM;
+    xdata::Integer _archiveIntervalDQM;  // lumi sections
+    xdata::String  _filePrefixDQM;
+    xdata::Integer _purgeTimeDQM;  // seconds
+    xdata::Integer _readyTimeDQM;  // seconds
+    xdata::Boolean _useCompressionDQM;
+    xdata::Integer _compressionLevelDQM;
     
     xdata::Integer _activeConsumerTimeout;  // seconds
     xdata::Integer _consumerQueueSize;

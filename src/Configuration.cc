@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.3 2011/01/21 15:54:57 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.4 2011/01/26 16:06:54 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -18,10 +18,12 @@ namespace smproxy
     // default values are used to initialize infospace values,
     // so they should be set first
     setDataRetrieverDefaults(instanceNumber);
+    setDQMProcessingDefaults();
     setEventServingDefaults();
     setQueueConfigurationDefaults();
 
     setupDataRetrieverInfoSpaceParams(infoSpace);
+    setupDQMProcessingInfoSpaceParams(infoSpace);
     setupEventServingInfoSpaceParams(infoSpace);
     setupQueueConfigurationInfoSpaceParams(infoSpace);
   }
@@ -35,6 +37,12 @@ namespace smproxy
   {
     boost::mutex::scoped_lock sl(_generalMutex);
     return _dataRetrieverParamCopy;
+  }
+
+  struct stor::DQMProcessingParams Configuration::getDQMProcessingParams() const
+  {
+    boost::mutex::scoped_lock sl(_generalMutex);
+    return _dqmParamCopy;
   }
 
   struct stor::EventServingParams Configuration::getEventServingParams() const
@@ -54,6 +62,7 @@ namespace smproxy
     boost::mutex::scoped_lock sl(_generalMutex);
     updateLocalRunData();
     updateLocalDataRetrieverData();
+    updateLocalDQMProcessingData();
     updateLocalEventServingData();
     updateLocalQueueConfigurationData();
   }
@@ -63,6 +72,9 @@ namespace smproxy
     _dataRetrieverParamCopy._smpsInstance = instanceNumber;
     _dataRetrieverParamCopy._smRegistrationList.clear();
     _dataRetrieverParamCopy._allowMissingSM = true;
+    _dataRetrieverParamCopy._maxConnectionRetries = 5;
+    _dataRetrieverParamCopy._connectTrySleepTime = 10;
+    _dataRetrieverParamCopy._headerRetryInterval = 5;
     _dataRetrieverParamCopy._sleepTimeIfIdle =
       boost::posix_time::milliseconds(100);
 
@@ -74,6 +86,18 @@ namespace smproxy
       tmpString = basename;
     }
     _dataRetrieverParamCopy._hostName = tmpString;
+  }
+
+  void Configuration::setDQMProcessingDefaults()
+  {
+    _dqmParamCopy._collateDQM = false;
+    _dqmParamCopy._archiveDQM = false;
+    _dqmParamCopy._filePrefixDQM = "/tmp/DQM";
+    _dqmParamCopy._archiveIntervalDQM = 0;
+    _dqmParamCopy._purgeTimeDQM = boost::posix_time::seconds(300);
+    _dqmParamCopy._readyTimeDQM = boost::posix_time::seconds(120);
+    _dqmParamCopy._useCompressionDQM = true;
+    _dqmParamCopy._compressionLevelDQM = 1;
   }
   
   void Configuration::setEventServingDefaults()
@@ -108,12 +132,42 @@ namespace smproxy
     // copy the initial defaults into the xdata variables
     stor::utils::getXdataVector(_dataRetrieverParamCopy._smRegistrationList, _smRegistrationList);
     _allowMissingSM = _dataRetrieverParamCopy._allowMissingSM;
+    _maxConnectionRetries = _dataRetrieverParamCopy._maxConnectionRetries;
+    _connectTrySleepTime = _dataRetrieverParamCopy._connectTrySleepTime;
+    _headerRetryInterval = _dataRetrieverParamCopy._headerRetryInterval;
     _sleepTimeIfIdle = _dataRetrieverParamCopy._sleepTimeIfIdle.total_milliseconds();
 
     // bind the local xdata variables to the infospace
     infoSpace->fireItemAvailable("SMRegistrationList", &_smRegistrationList);
     infoSpace->fireItemAvailable("allowMissingSM", &_allowMissingSM);
+    infoSpace->fireItemAvailable("maxConnectionRetries", &_maxConnectionRetries);
+    infoSpace->fireItemAvailable("connectTrySleepTime", &_connectTrySleepTime);
+    infoSpace->fireItemAvailable("headerRetryInterval", &_headerRetryInterval);
     infoSpace->fireItemAvailable("sleepTimeIfIdle", &_sleepTimeIfIdle);
+  }
+
+  void Configuration::
+  setupDQMProcessingInfoSpaceParams(xdata::InfoSpace* infoSpace)
+  {
+    // copy the initial defaults to the xdata variables
+    _collateDQM = _dqmParamCopy._collateDQM;
+    _archiveDQM = _dqmParamCopy._archiveDQM;
+    _archiveIntervalDQM = _dqmParamCopy._archiveIntervalDQM;
+    _filePrefixDQM = _dqmParamCopy._filePrefixDQM;
+    _purgeTimeDQM = _dqmParamCopy._purgeTimeDQM.total_seconds();
+    _readyTimeDQM = _dqmParamCopy._readyTimeDQM.total_seconds();
+    _useCompressionDQM = _dqmParamCopy._useCompressionDQM;
+    _compressionLevelDQM = _dqmParamCopy._compressionLevelDQM;
+
+    // bind the local xdata variables to the infospace
+    infoSpace->fireItemAvailable("collateDQM", &_collateDQM);
+    infoSpace->fireItemAvailable("archiveDQM", &_archiveDQM);
+    infoSpace->fireItemAvailable("archiveIntervalDQM", &_archiveIntervalDQM);
+    infoSpace->fireItemAvailable("purgeTimeDQM", &_purgeTimeDQM);
+    infoSpace->fireItemAvailable("readyTimeDQM", &_readyTimeDQM);
+    infoSpace->fireItemAvailable("filePrefixDQM", &_filePrefixDQM);
+    infoSpace->fireItemAvailable("useCompressionDQM", &_useCompressionDQM);
+    infoSpace->fireItemAvailable("compressionLevelDQM", &_compressionLevelDQM);
   }
   
   void Configuration::
@@ -158,6 +212,9 @@ namespace smproxy
   {
     stor::utils::getStdVector(_smRegistrationList, _dataRetrieverParamCopy._smRegistrationList);
     _dataRetrieverParamCopy._allowMissingSM = _allowMissingSM;
+    _dataRetrieverParamCopy._maxConnectionRetries = _maxConnectionRetries;
+    _dataRetrieverParamCopy._connectTrySleepTime = _connectTrySleepTime;
+    _dataRetrieverParamCopy._headerRetryInterval = _headerRetryInterval;
     _dataRetrieverParamCopy._sleepTimeIfIdle =
       boost::posix_time::milliseconds(_sleepTimeIfIdle);
   }
@@ -181,6 +238,26 @@ namespace smproxy
     if (_eventServeParamCopy._DQMconsumerQueueSize < 1)
     {
       _eventServeParamCopy._DQMconsumerQueueSize = 1;
+    }
+  }
+
+  void Configuration::updateLocalDQMProcessingData()
+  {
+    _dqmParamCopy._collateDQM = _collateDQM;
+    _dqmParamCopy._archiveDQM = _archiveDQM;
+    _dqmParamCopy._archiveIntervalDQM = _archiveIntervalDQM;
+    _dqmParamCopy._filePrefixDQM = _filePrefixDQM;
+    _dqmParamCopy._purgeTimeDQM =
+      boost::posix_time::seconds( static_cast<int>(_purgeTimeDQM) );
+    _dqmParamCopy._readyTimeDQM =
+      boost::posix_time::seconds( static_cast<int>(_readyTimeDQM) );
+    _dqmParamCopy._useCompressionDQM = _useCompressionDQM;
+    _dqmParamCopy._compressionLevelDQM = _compressionLevelDQM;
+
+    // make sure that purge time is larger than ready time
+    if ( _dqmParamCopy._purgeTimeDQM < _dqmParamCopy._readyTimeDQM )
+    {
+      _dqmParamCopy._purgeTimeDQM = _dqmParamCopy._readyTimeDQM + boost::posix_time::seconds(10);
     }
   }
 
