@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.5 2011/01/26 16:06:54 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.6 2011/01/27 14:55:54 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -31,8 +31,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.5 $
-   * $Date: 2011/01/26 16:06:54 $
+   * $Revision: 1.1.2.6 $
+   * $Date: 2011/01/27 14:55:54 $
    */
   
   class EventRetriever
@@ -63,10 +63,11 @@ namespace smproxy {
     void doIt();
     bool connect();
     void connectToSM(const std::string& sourceURL);
-    void getInitMsg() const;
+    void getInitMsg();
     bool getNextEvent(EventMsg&);
-    bool anyActiveConsumers(EventQueueCollectionPtr);
-
+    bool anyActiveConsumers(EventQueueCollectionPtr) const;
+    void disconnectFromCurrentSM();
+    
     //Prevent copying of the EventRetriever
     EventRetriever(EventRetriever const&);
     EventRetriever& operator=(EventRetriever const&);
@@ -86,7 +87,7 @@ namespace smproxy {
     typedef boost::shared_ptr<stor::EventServerProxy> EventServerPtr;
     typedef std::vector<EventServerPtr> EventServers;
     EventServers _eventServers;
-    EventServers::const_iterator _nextSMtoUse;
+    EventServers::iterator _nextSMtoUse;
 
     typedef std::map<std::string,bool> ConnectedSMs;
     ConnectedSMs _connectedSMs;

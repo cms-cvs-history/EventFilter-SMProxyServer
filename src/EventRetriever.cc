@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.8 2011/01/26 16:06:54 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.9 2011/01/27 14:55:54 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -150,7 +150,7 @@ namespace smproxy
   }
   
   
-  bool EventRetriever::anyActiveConsumers(EventQueueCollectionPtr eventQueueCollection)
+  bool EventRetriever::anyActiveConsumers(EventQueueCollectionPtr eventQueueCollection) const
   {
     boost::mutex::scoped_lock sl(_queueIDsLock);
     stor::utils::time_point_t now = stor::utils::getCurrentTime();
@@ -224,13 +224,24 @@ namespace smproxy
   }
   
   
-  void EventRetriever::getInitMsg() const
+  void EventRetriever::getInitMsg()
   {
-    std::string data;
-    (*_nextSMtoUse)->getInitMsg(data);
-
-    InitMsgView initMsgView(&data[0]);
-    _stateMachine->getInitMsgCollection()->addIfUnique(initMsgView);
+    do
+    {
+      try
+      {
+        std::string data;
+        (*_nextSMtoUse)->getInitMsg(data);
+        InitMsgView initMsgView(&data[0]);
+        _stateMachine->getInitMsgCollection()->addIfUnique(initMsgView);
+      }
+      catch (cms::Exception& e)
+      {
+        // Faulty init msg retrieved
+        disconnectFromCurrentSM();
+      }
+    }
+    while (_nextSMtoUse != _eventServers.end());
   }
   
   
@@ -248,13 +259,23 @@ namespace smproxy
         // all event servers have been tried
         boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
         tries = 0;
+        continue;
       }
 
       if ( ++_nextSMtoUse == _eventServers.end() )
         _nextSMtoUse = _eventServers.begin();
-      
-      (*_nextSMtoUse)->getEventMaybe(data);
-      ++tries;
+
+      try
+      {      
+        (*_nextSMtoUse)->getEventMaybe(data);
+        ++tries;
+      }
+      catch (cms::Exception& e)
+      {
+        // SM is no longer responding
+        disconnectFromCurrentSM();
+        tries = 0;
+      }
     }
 
     if ( edm::shutdown_flag ) return false;
@@ -271,6 +292,16 @@ namespace smproxy
 
     return true;
   }
+
+
+  void EventRetriever::disconnectFromCurrentSM()
+  {
+    // this code is not very efficient, but rarely used
+    _connectedSMs[ (*_nextSMtoUse)->getSourceURL() ] = false;
+    _eventServers.erase(_nextSMtoUse);
+    _nextSMtoUse = _eventServers.begin();
+  }
+
 
 } // namespace smproxy
   
