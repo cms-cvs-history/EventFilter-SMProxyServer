@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.6 2011/01/27 14:55:54 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.7 2011/01/27 16:33:12 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -31,8 +31,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.6 $
-   * $Date: 2011/01/27 14:55:54 $
+   * $Revision: 1.1.2.7 $
+   * $Date: 2011/01/27 16:33:12 $
    */
   
   class EventRetriever
@@ -42,7 +42,7 @@ namespace smproxy {
     EventRetriever
     (
       StateMachine*,
-      edm::ParameterSet const&
+      stor::EventConsRegPtr
     );
 
     ~EventRetriever();
@@ -65,6 +65,7 @@ namespace smproxy {
     void connectToSM(const std::string& sourceURL);
     void getInitMsg();
     bool getNextEvent(EventMsg&);
+    void adjustMinEventRequestInterval(const stor::utils::duration_t&);
     bool anyActiveConsumers(EventQueueCollectionPtr) const;
     void disconnectFromCurrentSM();
     

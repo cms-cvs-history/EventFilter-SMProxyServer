@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.6 2011/01/26 16:06:54 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.7 2011/01/27 14:55:54 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -106,14 +106,16 @@ namespace smproxy
     {
       // no retriever found for this event requests
       EventRetrieverPtr eventRetriever(
-        new EventRetriever(_stateMachine, eventConsumer->getPSet())
+        new EventRetriever(_stateMachine, eventConsumer)
       );
-      pos = _eventRetrievers.insert(pos,
+      _eventRetrievers.insert(pos,
         EventRetrieverMap::value_type(eventConsumer, eventRetriever));
     }
+    else
+    {
+      pos->second->addConsumer( eventConsumer );
+    }
 
-    pos->second->addConsumer( eventConsumer );
-    
     return true;
   }
   

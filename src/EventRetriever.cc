@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.9 2011/01/27 14:55:54 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.10 2011/01/27 16:33:12 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -19,13 +19,13 @@ namespace smproxy
   EventRetriever::EventRetriever
   (
     StateMachine* stateMachine,
-    edm::ParameterSet const& pset
+    stor::EventConsRegPtr consumer
   ) :
   _stateMachine(stateMachine),
-  _pset(pset),
+  _pset(consumer->getPSet()),
   _dataRetrieverParams(stateMachine->getConfiguration()->getDataRetrieverParams()),
   _dataRetrieverMonitorCollection(stateMachine->getStatisticsReporter()->getDataRetrieverMonitorCollection()),
-  _minEventRequestInterval(boost::posix_time::not_a_date_time),
+  _minEventRequestInterval(consumer->minEventRequestInterval()),
   _instance(++_retrieverCount)
   {
     std::ostringstream consumerName;
@@ -44,6 +44,7 @@ namespace smproxy
     _pset.addUntrackedParameter<int>("headerRetryInterval", _dataRetrieverParams._headerRetryInterval);
 
     _nextRequestTime = stor::utils::getCurrentTime();
+    _queueIDs.push_back(consumer->queueId());
 
     _thread.reset(
       new boost::thread( boost::bind( &EventRetriever::activity, this) )
@@ -59,26 +60,40 @@ namespace smproxy
   
   void EventRetriever::addConsumer(stor::EventConsRegPtr consumer)
   {
-    stor::utils::duration_t newMinEventRequestInterval =
-      consumer->minEventRequestInterval();
-
-    // Only update the _minEventRequestInterval if the new
-    // consumer specifies a shorter interval than any other
-    // consumer. If there's already a consumer not specifying
-    // an update interval, leave it unspecified.
-    if ( ! newMinEventRequestInterval.is_not_a_date_time() &&
-      ! _minEventRequestInterval.is_not_a_date_time() &&
-      newMinEventRequestInterval < _minEventRequestInterval )
-    {
-      // correct next request time for the shorter interval
-      _nextRequestTime -= (_minEventRequestInterval - newMinEventRequestInterval);
-      _minEventRequestInterval = newMinEventRequestInterval;
-    }
+    adjustMinEventRequestInterval( consumer->minEventRequestInterval() );
 
     boost::mutex::scoped_lock sl(_queueIDsLock);
     _queueIDs.push_back(consumer->queueId());
   }
   
+  
+  void EventRetriever::adjustMinEventRequestInterval(const stor::utils::duration_t& newInterval)
+  {
+    if ( _minEventRequestInterval.is_not_a_date_time() )
+    {
+      // A previous registered consumer wants to go as fast as possible.
+      // Thus, do nothing
+      return;
+    }
+
+    if ( newInterval.is_not_a_date_time() )
+    {
+      // The new consumer wants to go as fast as possible.
+      _minEventRequestInterval = boost::posix_time::not_a_date_time;
+      _nextRequestTime = stor::utils::getCurrentTime();
+      return;
+    }
+
+    if ( newInterval < _minEventRequestInterval )
+    {
+      // The new consumer wants to go faster
+      // Correct next request time for the shorter interval
+      _nextRequestTime -= (_minEventRequestInterval - newInterval);
+      _minEventRequestInterval = newInterval;
+      return;      
+    }
+  }
+
   
   void EventRetriever::stop()
   {
@@ -234,6 +249,7 @@ namespace smproxy
         (*_nextSMtoUse)->getInitMsg(data);
         InitMsgView initMsgView(&data[0]);
         _stateMachine->getInitMsgCollection()->addIfUnique(initMsgView);
+        break;
       }
       catch (cms::Exception& e)
       {
