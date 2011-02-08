@@ -1,10 +1,11 @@
-// $Id: EventRetriever.h,v 1.1.2.7 2011/01/27 16:33:12 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.8 2011/02/04 13:46:00 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
 #define EventFilter_SMProxyServer_EventRetriever_h
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
+#include "EventFilter/SMProxyServer/interface/ConnectionID.h"
 #include "EventFilter/SMProxyServer/interface/DataRetrieverMonitorCollection.h"
 #include "EventFilter/SMProxyServer/interface/EventQueueCollection.h"
 #include "EventFilter/StorageManager/interface/EventServerProxy.h"
@@ -31,8 +32,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.7 $
-   * $Date: 2011/01/27 16:33:12 $
+   * $Revision: 1.1.2.8 $
+   * $Date: 2011/02/04 13:46:00 $
    */
   
   class EventRetriever
@@ -65,7 +66,7 @@ namespace smproxy {
     void connectToSM(const std::string& sourceURL);
     void getInitMsg();
     bool getNextEvent(EventMsg&);
-    void adjustMinEventRequestInterval(const stor::utils::duration_t&);
+    bool adjustMinEventRequestInterval(const stor::utils::duration_t&);
     bool anyActiveConsumers(EventQueueCollectionPtr) const;
     void disconnectFromCurrentSM();
     
@@ -86,12 +87,9 @@ namespace smproxy {
     size_t _instance;
 
     typedef boost::shared_ptr<stor::EventServerProxy> EventServerPtr;
-    typedef std::vector<EventServerPtr> EventServers;
+    typedef std::map<ConnectionID, EventServerPtr> EventServers;
     EventServers _eventServers;
     EventServers::iterator _nextSMtoUse;
-
-    typedef std::map<std::string,bool> ConnectedSMs;
-    ConnectedSMs _connectedSMs;
 
     typedef std::vector<stor::QueueID> QueueIDs;
     QueueIDs _queueIDs;

@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.h,v 1.22.2.3 2011/01/25 17:04:15 mommsen Exp $
+// $Id: SMProxyServer.h,v 1.22.2.4 2011/01/26 11:15:40 mommsen Exp $
 /// @file: SMProxyServer.h 
 
 #ifndef EventFilter_SMProxyServer_SMProxyServer_h
@@ -24,8 +24,8 @@ namespace smproxy {
    * Main class of the SMProxyServer XDAQ application
    *
    * $Author: mommsen $
-   * $Revision: 1.22.2.3 $
-   * $Date: 2011/01/25 17:04:15 $
+   * $Revision: 1.22.2.4 $
+   * $Date: 2011/01/26 11:15:40 $
    */
 
   class SMProxyServer: public xdaq::Application
@@ -72,9 +72,15 @@ namespace smproxy {
       throw (xgi::exception::Exception);
 
     /**
+     * Webinterface callback creating web page showing the data retrieval
+     */
+    void dataRetrieverWebPage( xgi::Input* in, xgi::Output* out )
+      throw( xgi::exception::Exception );
+
+    /**
      * Webinterface callback creating web page showing the connected consumers
      */
-    void consumerStatisticsPage( xgi::Input* in, xgi::Output* out )
+    void consumerStatisticsWebPage( xgi::Input* in, xgi::Output* out )
       throw( xgi::exception::Exception );
 
     /**

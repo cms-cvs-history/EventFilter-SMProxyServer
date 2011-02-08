@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.10 2011/01/27 16:33:12 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.11 2011/02/04 13:46:00 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -60,20 +60,23 @@ namespace smproxy
   
   void EventRetriever::addConsumer(stor::EventConsRegPtr consumer)
   {
-    adjustMinEventRequestInterval( consumer->minEventRequestInterval() );
+    if ( adjustMinEventRequestInterval( consumer->minEventRequestInterval() ) )
+    {
+      _dataRetrieverMonitorCollection.updatePSet( consumer->getPSet() ); 
+    }
 
     boost::mutex::scoped_lock sl(_queueIDsLock);
     _queueIDs.push_back(consumer->queueId());
   }
   
   
-  void EventRetriever::adjustMinEventRequestInterval(const stor::utils::duration_t& newInterval)
+  bool EventRetriever::adjustMinEventRequestInterval(const stor::utils::duration_t& newInterval)
   {
     if ( _minEventRequestInterval.is_not_a_date_time() )
     {
       // A previous registered consumer wants to go as fast as possible.
       // Thus, do nothing
-      return;
+      return false;
     }
 
     if ( newInterval.is_not_a_date_time() )
@@ -81,7 +84,7 @@ namespace smproxy
       // The new consumer wants to go as fast as possible.
       _minEventRequestInterval = boost::posix_time::not_a_date_time;
       _nextRequestTime = stor::utils::getCurrentTime();
-      return;
+      return true;
     }
 
     if ( newInterval < _minEventRequestInterval )
@@ -90,8 +93,10 @@ namespace smproxy
       // Correct next request time for the shorter interval
       _nextRequestTime -= (_minEventRequestInterval - newInterval);
       _minEventRequestInterval = newInterval;
-      return;      
+      return true;      
     }
+
+    return false;
   }
 
   
@@ -184,7 +189,6 @@ namespace smproxy
   {
     size_t smCount = _dataRetrieverParams._smRegistrationList.size();
     _eventServers.clear();
-    _eventServers.reserve(smCount);
 
     for (size_t i = 0; i < smCount; ++i)
     { 
@@ -193,16 +197,6 @@ namespace smproxy
       // each event retriever shall start from a different SM
       size_t smInstance = (_instance + i) % smCount;
       std::string sourceURL = _dataRetrieverParams._smRegistrationList[smInstance];
-
-      std::pair<ConnectedSMs::const_iterator,bool> ret =
-        _connectedSMs.insert(ConnectedSMs::value_type(sourceURL,false));
-      if ( ! ret.second )
-      {
-        std::ostringstream errorMsg;
-        errorMsg << "Duplicated entry in smRegistrationList: " << sourceURL;
-        XCEPT_RAISE(exception::Configuration, errorMsg.str());
-      }
-      
       connectToSM(sourceURL);
     }
 
@@ -214,28 +208,38 @@ namespace smproxy
     // start with the first SM in our list
     _nextSMtoUse = _eventServers.begin();
 
-    size_t connectedSM = _eventServers.size();
-    _dataRetrieverMonitorCollection.getEventConnectionCountMQ().addSample(connectedSM);
+    const size_t connectedSM = _eventServers.size();
     
     return (connectedSM == smCount);
   }
   
   
   void EventRetriever::connectToSM(const std::string& sourceURL)
-  try
   {
     _pset.addParameter<std::string>("sourceURL", sourceURL);
-    EventServerPtr eventServerPtr(new stor::EventServerProxy(_pset));
-    _eventServers.push_back(eventServerPtr);
-    _connectedSMs[sourceURL] = true;
-  }
-  catch (cms::Exception& e)
-  {
-    std::ostringstream errorMsg;
-    errorMsg << "Failed to connect to SM on " << sourceURL;
+
+    const ConnectionID connectionId =
+      _dataRetrieverMonitorCollection.addNewConnection(_pset);
     
-    if ( ! _dataRetrieverParams._allowMissingSM )
-      XCEPT_RAISE(exception::DataRetrieval, errorMsg.str());
+    try
+    {
+      EventServerPtr eventServerPtr(new stor::EventServerProxy(_pset));
+      
+      _eventServers.insert(EventServers::value_type(connectionId, eventServerPtr));
+      _dataRetrieverMonitorCollection.setConnectionStatus(
+        connectionId, DataRetrieverMonitorCollection::CONNECTED);
+    }
+    catch (cms::Exception& e)
+    {
+      _dataRetrieverMonitorCollection.setConnectionStatus(
+        connectionId, DataRetrieverMonitorCollection::CONNECTION_FAILED);
+      
+      std::ostringstream errorMsg;
+      errorMsg << "Failed to connect to SM on " << sourceURL;
+      
+      if ( ! _dataRetrieverParams._allowMissingSM )
+        XCEPT_RAISE(exception::DataRetrieval, errorMsg.str());
+    }
   }
   
   
@@ -246,7 +250,7 @@ namespace smproxy
       try
       {
         std::string data;
-        (*_nextSMtoUse)->getInitMsg(data);
+        _nextSMtoUse->second->getInitMsg(data);
         InitMsgView initMsgView(&data[0]);
         _stateMachine->getInitMsgCollection()->addIfUnique(initMsgView);
         break;
@@ -283,7 +287,7 @@ namespace smproxy
 
       try
       {      
-        (*_nextSMtoUse)->getEventMaybe(data);
+        _nextSMtoUse->second->getEventMaybe(data);
         ++tries;
       }
       catch (cms::Exception& e)
@@ -300,8 +304,9 @@ namespace smproxy
     if (headerView.code() == Header::DONE) return false;
     
     event = EventMsg( EventMsgView(&data[0]) );
-    _dataRetrieverMonitorCollection.getEventSizeMQ().addSample(
-      static_cast<double>( event.totalDataSize() ) / 0x100000 );
+    _dataRetrieverMonitorCollection.addRetrievedSample(
+      _nextSMtoUse->first, event.totalDataSize()
+    );
 
     if ( ! _minEventRequestInterval.is_not_a_date_time() )
       _nextRequestTime = stor::utils::getCurrentTime() + _minEventRequestInterval;
@@ -313,7 +318,8 @@ namespace smproxy
   void EventRetriever::disconnectFromCurrentSM()
   {
     // this code is not very efficient, but rarely used
-    _connectedSMs[ (*_nextSMtoUse)->getSourceURL() ] = false;
+    _dataRetrieverMonitorCollection.setConnectionStatus(
+      _nextSMtoUse->first, DataRetrieverMonitorCollection::DISCONNECTED);
     _eventServers.erase(_nextSMtoUse);
     _nextSMtoUse = _eventServers.begin();
   }

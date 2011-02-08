@@ -1,10 +1,21 @@
-// $Id: DataRetrieverMonitorCollection.h,v 1.7.8.1 2011/01/24 12:18:39 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.1 2011/01/26 16:06:54 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.h 
 
 #ifndef EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
 #define EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
 
+#include "EventFilter/SMProxyServer/interface/ConnectionID.h"
 #include "EventFilter/StorageManager/interface/MonitorCollection.h"
+#include "EventFilter/StorageManager/interface/MonitoredQuantity.h"
+#include "EventFilter/StorageManager/interface/RegistrationInfoBase.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
+
+#include <map>
+#include <string>
+#include <vector>
 
 
 namespace smproxy {
@@ -13,90 +24,91 @@ namespace smproxy {
    * A collection of MonitoredQuantities related to data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.7.8.1 $
-   * $Date: 2011/01/24 12:18:39 $
+   * $Revision: 1.1.2.1 $
+   * $Date: 2011/01/26 16:06:54 $
    */
   
   class DataRetrieverMonitorCollection : public stor::MonitorCollection
   {
-  private:
-
-    stor::MonitoredQuantity _eventConnectionCount;
-    stor::MonitoredQuantity _eventSize;
-    stor::MonitoredQuantity _eventBandwidth;
-
-    stor::MonitoredQuantity _dqmEventConnectionCount;
-    stor::MonitoredQuantity _dqmEventSize;
-    stor::MonitoredQuantity _dqmEventBandwidth;
-
   public:
+
+    enum ConnectionStatus { CONNECTED, CONNECTION_FAILED, DISCONNECTED, UNKNOWN };
 
     struct DataRetrieverStats
     {
-      stor::MonitoredQuantity::Stats eventConnectionCountStats;
-      stor::MonitoredQuantity::Stats eventSizeStats;                //MB
-      stor::MonitoredQuantity::Stats eventBandwidthStats;           //MB/s
-      
-      stor::MonitoredQuantity::Stats dqmEventConnectionCountStats;
-      stor::MonitoredQuantity::Stats dqmEventSizeStats;             //MB
-      stor::MonitoredQuantity::Stats dqmEventBandwidthStats;        //MB/s
+      edm::ParameterSet pset;
+      ConnectionStatus connectionStatus;
+      stor::MonitoredQuantity::Stats sizeStats;         //kB
+
+      bool operator<(const DataRetrieverStats& other) const
+      { return ( pset.getParameter<std::string>("sourceURL") < 
+          other.pset.getParameter<std::string>("sourceURL")); }
     };
-
+    typedef std::vector<DataRetrieverStats> DataRetrieverStatList;
+    
+    
     explicit DataRetrieverMonitorCollection(const stor::utils::duration_t& updateInterval);
+    
+    /**
+     * Add a new  server connection.
+     * Returns an unique connection ID.
+     */
+    ConnectionID addNewConnection(const edm::ParameterSet&);
 
-    const stor::MonitoredQuantity& getEventConnectionCountMQ() const {
-      return _eventConnectionCount;
-    }
-    stor::MonitoredQuantity& getEventConnectionCountMQ() {
-      return _eventConnectionCount;
-    }
+    /**
+     * Set status of given connection. Returns false if the ConnectionID is unknown.
+     */
+    bool setConnectionStatus(const ConnectionID&, const ConnectionStatus&);
 
-    const stor::MonitoredQuantity& getEventSizeMQ() const {
-      return _eventSize;
-    }
-    stor::MonitoredQuantity& getEventSizeMQ() {
-      return _eventSize;
-    }
+    /**
+     * Replace the consumer ParameterSet for all connections
+     */
+    void updatePSet(const edm::ParameterSet&);
 
-    const stor::MonitoredQuantity& getEventBandwidthMQ() const {
-      return _eventBandwidth;
-    }
-    stor::MonitoredQuantity& getEventBandwidthMQ() {
-      return _eventBandwidth;
-    }
+    /**
+     * Add a retrieved  sample in Bytes from the given connection.
+     * Returns false if the ConnectionID is unknown.
+     */
+    bool addRetrievedSample(const ConnectionID&, const unsigned int& size);
+    
+    /**
+     * Write the total  retrieval statistics into the given Stats struct.
+     */
+    void getTotalStats(DataRetrieverStats&) const;
 
-    const stor::MonitoredQuantity& getDQMEventConnectionCountMQ() const {
-      return _dqmEventConnectionCount;
-    }
-    stor::MonitoredQuantity& getDQMEventConnectionCountMQ() {
-      return _dqmEventConnectionCount;
-    }
-
-    const stor::MonitoredQuantity& getDQMEventSizeMQ() const {
-      return _dqmEventSize;
-    }
-    stor::MonitoredQuantity& getDQMEventSizeMQ() {
-      return _dqmEventSize;
-    }
-
-    const stor::MonitoredQuantity& getDQMEventBandwidthMQ() const {
-      return _dqmEventBandwidth;
-    }
-    stor::MonitoredQuantity& getDQMEventBandwidthMQ() {
-      return _dqmEventBandwidth;
-    }
-
-   /**
-    * Write all our collected statistics into the given Stats struct.
-    */
-    void getStats(DataRetrieverStats& stats) const;
-
+    /**
+     * Write the  retrieval statistics for the given connectionID into the Stats struct.
+     */
+    void getStatsByConnection(DataRetrieverStatList&) const;
+    
 
   private:
+
+    stor::MonitoredQuantity _totalSize;
+
+    struct DataRetrieverMQ
+    {
+      edm::ParameterSet _pset;
+      ConnectionStatus _connectionStatus;
+      stor::MonitoredQuantity _size;       //kB
+
+      DataRetrieverMQ
+      (
+        const edm::ParameterSet&,
+        const stor::utils::duration_t& updateInterval
+      );
+    };
 
     //Prevent copying of the DataRetrieverMonitorCollection
     DataRetrieverMonitorCollection(DataRetrieverMonitorCollection const&);
     DataRetrieverMonitorCollection& operator=(DataRetrieverMonitorCollection const&);
+
+    const stor::utils::duration_t _updateInterval;
+    typedef boost::shared_ptr<DataRetrieverMQ> DataRetrieverMQPtr;
+    typedef std::map<ConnectionID, DataRetrieverMQPtr> RetrieverStatMap;
+    RetrieverStatMap _retrieverStats;
+    mutable boost::mutex _retrieverStatsMutex;
+    ConnectionID _nextConnectionId;
 
     virtual void do_calculateStatistics();
     virtual void do_reset();
@@ -104,8 +116,11 @@ namespace smproxy {
     // virtual void do_updateInfoSpaceItems();
 
   };
+
+  std::ostream& operator<<(std::ostream&, const DataRetrieverMonitorCollection::ConnectionStatus&);
+
   
-} // namespace stor
+} // namespace smproxy
 
 #endif // EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h 
 

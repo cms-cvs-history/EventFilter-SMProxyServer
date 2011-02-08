@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.44.2.3 2011/01/26 11:15:40 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.2.4 2011/01/26 16:06:54 mommsen Exp $
 /// @file: SMProxyServer.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -78,8 +78,9 @@ void SMProxyServer::bindWebInterfaceCallbacks()
 {
   xgi::bind(this,&SMProxyServer::css,                      "styles.css");
   xgi::bind(this,&SMProxyServer::defaultWebPage,           "Default");
+  xgi::bind(this,&SMProxyServer::dataRetrieverWebPage,     "dataRetriever");
   xgi::bind(this,&SMProxyServer::dqmEventStatisticsWebPage,"dqmEventStatistics");
-  xgi::bind(this,&SMProxyServer::consumerStatisticsPage,   "consumerStatistics" );
+  xgi::bind(this,&SMProxyServer::consumerStatisticsWebPage,"consumerStatistics" );
 }
 
 
@@ -160,10 +161,7 @@ throw (xgi::exception::Exception)
   
   try
   {
-    // _webPageHelper.defaultWebPage(
-    //   out,
-    //   _sharedResources
-    // );
+    _smpsWebPageHelper->defaultWebPage(out);
   }
   catch(std::exception &e)
   {
@@ -183,16 +181,16 @@ throw (xgi::exception::Exception)
 }
 
 
-void SMProxyServer::consumerStatisticsPage(xgi::Input* in, xgi::Output* out)
+void SMProxyServer::dataRetrieverWebPage(xgi::Input* in, xgi::Output* out)
 throw( xgi::exception::Exception )
 {
 
   std::string err_msg =
-    "Failed to create consumer statistics page";
+    "Failed to create data retriever web page";
 
   try
   {
-    _smpsWebPageHelper->consumerStatistics(out);
+    _smpsWebPageHelper->dataRetrieverWebPage(out);
   }
   catch( std::exception &e )
   {
@@ -207,7 +205,33 @@ throw( xgi::exception::Exception )
     LOG4CPLUS_ERROR( getApplicationLogger(), err_msg );
     XCEPT_RAISE( xgi::exception::Exception, err_msg );
   }
+}
 
+
+void SMProxyServer::consumerStatisticsWebPage(xgi::Input* in, xgi::Output* out)
+throw( xgi::exception::Exception )
+{
+
+  std::string err_msg =
+    "Failed to create consumer web page";
+
+  try
+  {
+    _smpsWebPageHelper->consumerStatisticsWebPage(out);
+  }
+  catch( std::exception &e )
+  {
+    err_msg += ": ";
+    err_msg += e.what();
+    LOG4CPLUS_ERROR( getApplicationLogger(), err_msg );
+    XCEPT_RAISE( xgi::exception::Exception, err_msg );
+  }
+  catch(...)
+  {
+    err_msg += ": Unknown exception";
+    LOG4CPLUS_ERROR( getApplicationLogger(), err_msg );
+    XCEPT_RAISE( xgi::exception::Exception, err_msg );
+  }
 }
 
 
@@ -218,10 +242,7 @@ throw (xgi::exception::Exception)
 
   try
   {
-    // _webPageHelper.dqmEventWebPage(
-    //   out,
-    //   _sharedResources
-    // );
+    _smpsWebPageHelper->dqmEventStatisticsWebPage(out);
   }
   catch(std::exception &e)
   {

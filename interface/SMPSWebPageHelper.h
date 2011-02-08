@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.h,v 1.12.2.1 2011/01/24 12:18:39 mommsen Exp $
+// $Id: SMPSWebPageHelper.h,v 1.1.2.1 2011/01/25 17:04:15 mommsen Exp $
 /// @file: SMPSWebPageHelper.h
 
 #ifndef EventFilter_SMProxyServer_SMPSWebPageHelper_h
@@ -16,8 +16,8 @@ namespace smproxy {
    * Helper class to handle SM proxy server web page requests
    *
    * $Author: mommsen $
-   * $Revision: 1.12.2.1 $
-   * $Date: 2011/01/24 12:18:39 $
+   * $Revision: 1.1.2.1 $
+   * $Date: 2011/01/25 17:04:15 $
    */
   
   class SMPSWebPageHelper : public stor::WebPageHelper
@@ -31,9 +31,24 @@ namespace smproxy {
     );
     
     /**
+       Generates the default web page
+    */
+    void defaultWebPage(xgi::Output*);
+    
+    /**
+       Generates the data retriever web page
+    */
+    void dataRetrieverWebPage(xgi::Output*);
+    
+    /**
+       Generates the data retriever web page
+    */
+    void dqmEventStatisticsWebPage(xgi::Output*);
+
+    /**
        Generates consumer statistics page
     */
-    void consumerStatistics(xgi::Output*);
+    void consumerStatisticsWebPage(xgi::Output*);
     
     
   private:
@@ -41,9 +56,37 @@ namespace smproxy {
     /**
      * Adds the links for the other hyperdaq webpages
      */
-    virtual void addDOMforHyperLinks(stor::XHTMLMaker&, stor::XHTMLMaker::Node* parent) {};
+    virtual void addDOMforHyperLinks(stor::XHTMLMaker&, stor::XHTMLMaker::Node* parent);
 
+    /**
+     * Adds the event servers to the parent DOM element
+     */
+    void addDOMforEventServers
+    (
+      stor::XHTMLMaker&,
+      stor::XHTMLMaker::Node* parent
+    );
+ 
+    /**
+     * Adds a table row for each event server
+     */
+    void addRowForEventServer
+    (
+      stor::XHTMLMaker&,
+      stor::XHTMLMaker::Node* table,
+      DataRetrieverMonitorCollection::DataRetrieverStats const&
+    );
+    
 
+    /**
+     * Adds the DQM event (histogram) servers to the parent DOM element
+     */
+    void addDOMforDQMEventServers
+    (
+      stor::XHTMLMaker&,
+      stor::XHTMLMaker::Node* parent
+    );
+    
     //Prevent copying of the SMPSWebPageHelper
     SMPSWebPageHelper(SMPSWebPageHelper const&);
     SMPSWebPageHelper& operator=(SMPSWebPageHelper const&);
