@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.4 2011/02/08 16:51:51 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.5 2011/02/09 11:47:04 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
@@ -357,32 +357,6 @@ namespace smproxy
   }
   
 } // namespace smproxy
-
-
-namespace stor
-{
-  ////////////////////////////////////////////////////////
-  // Specializations for ConsumerWebPageHelper template //
-  ////////////////////////////////////////////////////////
-  
-  
-  template<>
-  void ConsumerWebPageHelper<smproxy::SMPSWebPageHelper, smproxy::EventQueueCollection,smproxy::StatisticsReporter>::
-  addEntryForMaxRequestRate
-  (
-    XHTMLMaker& maker,
-    XHTMLMaker::Node* tableRow,
-    const utils::duration_t& interval
-  )
-  {
-    XHTMLMaker::Node* tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
-    if ( interval.is_not_a_date_time() )
-      maker.addText(tableDiv, "unlimited");
-    else
-      maker.addDouble(tableDiv, 1 / utils::duration_to_seconds(interval), 1);
-  }
-
-} // namespace stor
 
 
 /// emacs configuration

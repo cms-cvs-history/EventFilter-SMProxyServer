@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.11 2011/02/04 13:46:00 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.12 2011/02/08 16:51:51 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -28,9 +28,9 @@ namespace smproxy
   _minEventRequestInterval(consumer->minEventRequestInterval()),
   _instance(++_retrieverCount)
   {
-    std::ostringstream consumerName;
-    consumerName << "SMPS_" << _dataRetrieverParams._smpsInstance;
-    _pset.addUntrackedParameter<std::string>("consumerName", consumerName.str());
+    _pset.addUntrackedParameter<std::string>("consumerName",
+      _stateMachine->getApplicationDescriptor()->getContextDescriptor()->getURL()+"/"+
+      _stateMachine->getApplicationDescriptor()->getURN());
 
     if ( _dataRetrieverParams._allowMissingSM )
     {

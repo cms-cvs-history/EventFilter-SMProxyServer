@@ -1,4 +1,4 @@
-// $Id: StateMachine.h,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
+// $Id: StateMachine.h,v 1.1.2.4 2011/01/25 17:04:15 mommsen Exp $
 /// @file: StateMachine.h 
 
 #ifndef EventFilter_SMProxyServer_StateMachine_h
@@ -16,6 +16,7 @@
 #include "xcept/Exception.h"
 #include "xcept/tools.h"
 #include "xdaq/Application.h"
+#include "xdaq/ApplicationDescriptor.h"
 #include "xdaq2rc/RcmsStateNotifier.h"
 
 #include <boost/shared_ptr.hpp>
@@ -101,6 +102,8 @@ namespace smproxy
     { return _dqmEventQueueCollection; }
     StatisticsReporterPtr getStatisticsReporter() const
     { return _statisticsReporter; }
+    xdaq::ApplicationDescriptor* getApplicationDescriptor() const
+    { return _app->getApplicationDescriptor(); }
 
     void updateConfiguration();
     void setQueueSizes();
