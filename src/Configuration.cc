@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.4 2011/01/26 16:06:54 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.5 2011/01/27 14:54:06 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -10,10 +10,13 @@
 
 namespace smproxy
 {
-  Configuration::Configuration(xdata::InfoSpace* infoSpace,
-                               unsigned long instanceNumber) :
-    _infospaceRunNumber(0),
-    _localRunNumber(0)
+  Configuration::Configuration
+  (
+    xdata::InfoSpace* infoSpace,
+    unsigned long instanceNumber
+  )// :
+  //_infospaceRunNumber(0),
+  //_localRunNumber(0)
   {
     // default values are used to initialize infospace values,
     // so they should be set first
@@ -28,10 +31,10 @@ namespace smproxy
     setupQueueConfigurationInfoSpaceParams(infoSpace);
   }
 
-  unsigned int Configuration::getRunNumber() const
-  {
-    return _localRunNumber;
-  }
+  // unsigned int Configuration::getRunNumber() const
+  // {
+  //   return _localRunNumber;
+  // }
 
   struct DataRetrieverParams Configuration::getDataRetrieverParams() const
   {
@@ -60,7 +63,7 @@ namespace smproxy
   void Configuration::updateAllParams()
   {
     boost::mutex::scoped_lock sl(_generalMutex);
-    updateLocalRunData();
+    //updateLocalRunData();
     updateLocalDataRetrieverData();
     updateLocalDQMProcessingData();
     updateLocalEventServingData();
@@ -103,7 +106,7 @@ namespace smproxy
   void Configuration::setEventServingDefaults()
   {
     _eventServeParamCopy._activeConsumerTimeout = boost::posix_time::seconds(60);
-    _eventServeParamCopy._consumerQueueSize = 5;
+    _eventServeParamCopy._consumerQueueSize = 10;
     _eventServeParamCopy._consumerQueuePolicy = "DiscardOld";
     _eventServeParamCopy._DQMactiveConsumerTimeout = boost::posix_time::seconds(60);
     _eventServeParamCopy._DQMconsumerQueueSize = 15;
@@ -116,15 +119,15 @@ namespace smproxy
     _queueConfigParamCopy._monitoringSleepSec = boost::posix_time::seconds(1);
   }
 
-  void Configuration::
-  setupRunInfoSpaceParams(xdata::InfoSpace* infoSpace)
-  {
-    // copy the initial defaults into the xdata variables
-    _infospaceRunNumber = _localRunNumber;
+  // void Configuration::
+  // setupRunInfoSpaceParams(xdata::InfoSpace* infoSpace)
+  // {
+  //   // copy the initial defaults into the xdata variables
+  //   _infospaceRunNumber = _localRunNumber;
 
-    // bind the local xdata variables to the infospace
-    infoSpace->fireItemAvailable("runNumber", &_infospaceRunNumber);
-  }
+  //   // bind the local xdata variables to the infospace
+  //   //infoSpace->fireItemAvailable("runNumber", &_infospaceRunNumber);
+  // }
 
   void Configuration::
   setupDataRetrieverInfoSpaceParams(xdata::InfoSpace* infoSpace)
@@ -203,10 +206,10 @@ namespace smproxy
     infoSpace->fireItemAvailable("monitoringSleepSec", &_monitoringSleepSec);
   }
  
-  void Configuration::updateLocalRunData()
-  {
-    _localRunNumber = _infospaceRunNumber;
-  }
+  // void Configuration::updateLocalRunData()
+  // {
+  //   _localRunNumber = _infospaceRunNumber;
+  // }
 
   void Configuration::updateLocalDataRetrieverData()
   {

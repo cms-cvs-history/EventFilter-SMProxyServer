@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.5 2011/01/26 16:06:54 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.6 2011/01/27 14:54:06 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -55,8 +55,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.5 $
-   * $Date: 2011/01/26 16:06:54 $
+   * $Revision: 1.1.2.6 $
+   * $Date: 2011/01/27 14:54:06 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -80,7 +80,7 @@ namespace smproxy
     /**
      * Get run number:
      */
-    unsigned int getRunNumber() const;
+    //unsigned int getRunNumber() const;
 
     /**
      * Returns a copy of the event retriever parameters. These values
@@ -132,13 +132,13 @@ namespace smproxy
     void setEventServingDefaults();
     void setQueueConfigurationDefaults();
 
-    void setupRunInfoSpaceParams(xdata::InfoSpace*);
+    //void setupRunInfoSpaceParams(xdata::InfoSpace*);
     void setupDataRetrieverInfoSpaceParams(xdata::InfoSpace*);
     void setupDQMProcessingInfoSpaceParams(xdata::InfoSpace*);
     void setupEventServingInfoSpaceParams(xdata::InfoSpace*);
     void setupQueueConfigurationInfoSpaceParams(xdata::InfoSpace*);
 
-    void updateLocalRunData();
+    //void updateLocalRunData();
     void updateLocalDataRetrieverData();
     void updateLocalDQMProcessingData();
     void updateLocalEventServingData();
@@ -151,8 +151,8 @@ namespace smproxy
 
     mutable boost::mutex _generalMutex;
     
-    xdata::UnsignedInteger32 _infospaceRunNumber;
-    unsigned int _localRunNumber;
+    //xdata::UnsignedInteger32 _infospaceRunNumber;
+    //unsigned int _localRunNumber;
     
     xdata::Vector<xdata::String> _smRegistrationList;
     xdata::Boolean _allowMissingSM;
