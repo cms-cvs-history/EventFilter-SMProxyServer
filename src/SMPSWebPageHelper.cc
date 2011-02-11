@@ -1,11 +1,11 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.5 2011/02/09 11:47:04 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.6 2011/02/10 10:20:57 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
+#include "EventFilter/StorageManager/interface/RegistrationCollection.h"
+#include "EventFilter/StorageManager/interface/Utils.h"
 #include "EventFilter/StorageManager/interface/XHTMLMonitor.h"
 #include "EventFilter/StorageManager/src/ConsumerWebPageHelper.icc"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Utilities/interface/EDMException.h"
 
 
 namespace smproxy
@@ -21,7 +21,7 @@ namespace smproxy
   { }
   
   
-  void SMPSWebPageHelper::defaultWebPage(xgi::Output* out)
+  void SMPSWebPageHelper::defaultWebPage(xgi::Output* out) const
   {
     stor::XHTMLMonitor theMonitor;
     stor::XHTMLMaker maker;
@@ -32,6 +32,14 @@ namespace smproxy
       _stateMachine->getStateName(),
       _stateMachine->getReasonForFailed()
     );
+
+    DataRetrieverMonitorCollection::DataRetrieverSummaryStats summaryStats;
+    _stateMachine->getStatisticsReporter()->
+      getDataRetrieverMonitorCollection().getSummaryStats(summaryStats);
+
+    addDOMforConnectionInfo(maker, body, summaryStats);
+
+    addDOMforThroughput(maker, body, summaryStats);
     
     addDOMforHyperLinks(maker, body);
     
@@ -40,7 +48,7 @@ namespace smproxy
   }
   
   
-  void SMPSWebPageHelper::dataRetrieverWebPage(xgi::Output* out)
+  void SMPSWebPageHelper::dataRetrieverWebPage(xgi::Output* out) const
   {
     stor::XHTMLMonitor theMonitor;
     stor::XHTMLMaker maker;
@@ -65,7 +73,7 @@ namespace smproxy
   } 
   
   
-  void SMPSWebPageHelper::consumerStatisticsWebPage(xgi::Output* out)
+  void SMPSWebPageHelper::consumerStatisticsWebPage(xgi::Output* out) const
   {
     _consumerWebPageHelper.consumerStatistics(out,
       _stateMachine->getExternallyVisibleStateName(),
@@ -79,7 +87,7 @@ namespace smproxy
   }
   
   
-  void SMPSWebPageHelper::dqmEventStatisticsWebPage(xgi::Output* out)
+  void SMPSWebPageHelper::dqmEventStatisticsWebPage(xgi::Output* out) const
   {
     stor::XHTMLMonitor theMonitor;
     stor::XHTMLMaker maker;
@@ -102,7 +110,7 @@ namespace smproxy
   (
     stor::XHTMLMaker& maker,
     stor::XHTMLMaker::Node *parent
-  )
+  ) const
   {
     std::string url = _appDescriptor->getContextDescriptor()->getURL()
       + "/" + _appDescriptor->getURN();
@@ -138,14 +146,314 @@ namespace smproxy
   }
   
   
+  void SMPSWebPageHelper::addDOMforConnectionInfo
+  (
+    stor::XHTMLMaker& maker,
+    stor::XHTMLMaker::Node* parent,
+    const DataRetrieverMonitorCollection::DataRetrieverSummaryStats& summaryStats
+  ) const
+  {
+    stor::XHTMLMaker::AttrMap colspanAttr;
+    colspanAttr[ "colspan" ] = "2";
+
+    stor::XHTMLMaker::AttrMap tableAttr = _tableAttr;
+    tableAttr[ "width" ] = "50%";
+
+    stor::XHTMLMaker::AttrMap widthAttr;
+    widthAttr[ "width" ] = "70%";
+ 
+    stor::XHTMLMaker::Node* table = maker.addNode("table", parent, tableAttr);
+    
+    stor::XHTMLMaker::Node* tableRow = maker.addNode("tr", table, _rowAttr);
+    stor::XHTMLMaker::Node* tableDiv = maker.addNode("th", tableRow, colspanAttr);
+    maker.addText(tableDiv, "Connection Information");
+
+    // # of configured SMs
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("td", tableRow, widthAttr);
+    maker.addText(tableDiv, "# of configured StorageManagers");
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    const size_t configuredSMs = _stateMachine->getConfiguration()->
+      getDataRetrieverParams()._smRegistrationList.size();
+    maker.addInt(tableDiv, configuredSMs);
+
+    // # of requested SMs connections
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("td", tableRow, widthAttr);
+    maker.addText(tableDiv, "# of requested SM connections");
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addInt(tableDiv, summaryStats.registeredSMs);
+
+    // # of active SMs connections
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("td", tableRow, widthAttr);
+    maker.addText(tableDiv, "# of active SM connections");
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addInt(tableDiv, summaryStats.activeSMs);
+
+    // # of connected event consumers
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("td", tableRow, widthAttr);
+    maker.addText(tableDiv, "# of connected event consumers");
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    stor::RegistrationCollection::ConsumerRegistrations consumers;
+    _stateMachine->getRegistrationCollection()->
+      getEventConsumers(consumers);
+    maker.addInt(tableDiv, consumers.size());
+
+    // # of connected DQM event (histogram) consumers
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("td", tableRow, widthAttr);
+    maker.addText(tableDiv, "# of connected histogram consumers");
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    stor::RegistrationCollection::DQMConsumerRegistrations dqmConsumers;
+    _stateMachine->getRegistrationCollection()->
+      getDQMEventConsumers(dqmConsumers);
+    maker.addInt(tableDiv, dqmConsumers.size());
+  }
+  
+  
+  void SMPSWebPageHelper::addDOMforThroughput
+  (
+    stor::XHTMLMaker& maker,
+    stor::XHTMLMaker::Node* parent,
+    const DataRetrieverMonitorCollection::DataRetrieverSummaryStats& summaryStats
+  ) const
+  {
+    stor::XHTMLMaker::AttrMap colspanAttr;
+    colspanAttr[ "colspan" ] = "11";
+
+    stor::XHTMLMaker::AttrMap subColspanAttr;
+
+    stor::XHTMLMaker::AttrMap rowspanAttr;
+    rowspanAttr[ "rowspan" ] = "3";
+
+    stor::XHTMLMaker::Node* table = maker.addNode("table", parent, _tableAttr);
+    
+    stor::XHTMLMaker::Node* tableRow = maker.addNode("tr", table, _rowAttr);
+    stor::XHTMLMaker::Node* tableDiv = maker.addNode("th", tableRow, colspanAttr);
+    maker.addText(tableDiv, "Throughput");
+
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("th", tableRow, rowspanAttr);
+    maker.addText(tableDiv, "Requested Event Type");
+    subColspanAttr[ "colspan" ] = "2";
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "");
+    subColspanAttr[ "colspan" ] = "4";
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "Input");
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "Output");
+
+    subColspanAttr[ "colspan" ] = "2";
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "Average Event Size (kB)");
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "Event Rate (Hz)");
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "Bandwidth (kB/s)");
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "Event Rate (Hz)");
+    tableDiv = maker.addNode("th", tableRow, subColspanAttr);
+    maker.addText(tableDiv, "Bandwidth (kB/s)");
+
+    tableRow = maker.addNode("tr", table, _rowAttr);
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "recent");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "recent");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "recent");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "recent");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "recent");
+    
+    if ( summaryStats.eventTypeStats.empty() )
+    {
+      stor::XHTMLMaker::AttrMap messageAttr = colspanAttr;
+      messageAttr[ "align" ] = "center";
+      
+      tableRow = maker.addNode("tr", table, _rowAttr);
+      tableDiv = maker.addNode("td", tableRow, messageAttr);
+      maker.addText(tableDiv, "No data flowing, yet.");
+      return;
+    }
+    
+    bool evenRow = false;
+    
+    for (DataRetrieverMonitorCollection::DataRetrieverSummaryStats::EventTypeStatList::const_iterator
+           it = summaryStats.eventTypeStats.begin(), itEnd = summaryStats.eventTypeStats.end();
+         it != itEnd; ++it)
+    {
+      stor::XHTMLMaker::AttrMap rowAttr = _rowAttr;
+      if( evenRow )
+      {
+        rowAttr[ "style" ] = "background-color:#e0e0e0;";
+        evenRow = false;
+      }
+       else
+      {
+        evenRow = true;
+      }
+      stor::XHTMLMaker::Node* tableRow = maker.addNode("tr", table, rowAttr);
+      addRowForEventType(maker, tableRow, *it);
+    }
+
+    tableRow = maker.addNode("tr", table, _specialRowAttr);
+    tableDiv = maker.addNode("td", tableRow);
+    maker.addText(tableDiv, "Total");
+
+    // Average event size
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, summaryStats.sizeStats.getValueAverage(stor::MonitoredQuantity::FULL));
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, summaryStats.sizeStats.getValueAverage(stor::MonitoredQuantity::RECENT));
+
+    // Input event rate
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, summaryStats.sizeStats.getSampleRate(stor::MonitoredQuantity::FULL));
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, summaryStats.sizeStats.getSampleRate(stor::MonitoredQuantity::RECENT));
+
+    // Input bandwidth
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, summaryStats.sizeStats.getValueRate(stor::MonitoredQuantity::FULL));
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, summaryStats.sizeStats.getValueRate(stor::MonitoredQuantity::RECENT));
+    
+    const stor::EventConsumerMonitorCollection& ecmc =
+      _stateMachine->getStatisticsReporter()->getEventConsumerMonitorCollection();
+    const stor::DQMConsumerMonitorCollection& dcmc =
+      _stateMachine->getStatisticsReporter()->getDQMConsumerMonitorCollection();
+    stor::ConsumerMonitorCollection::TotalStats ecmcStats, dcmcStats;
+    ecmc.getTotalStats(ecmcStats);
+    dcmc.getTotalStats(dcmcStats);
+
+    // Output event rate
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv,
+      ecmcStats.servedStats.getSampleRate(stor::MonitoredQuantity::FULL) +
+      dcmcStats.servedStats.getSampleRate(stor::MonitoredQuantity::FULL)
+    );
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv,
+      ecmcStats.servedStats.getSampleRate(stor::MonitoredQuantity::RECENT) +
+      dcmcStats.servedStats.getSampleRate(stor::MonitoredQuantity::RECENT)
+    );
+    
+    // Output bandwidth
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv,
+      (ecmcStats.servedStats.getValueRate(stor::MonitoredQuantity::FULL) +
+        dcmcStats.servedStats.getValueRate(stor::MonitoredQuantity::FULL)) / 1024
+    );
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv,
+      (ecmcStats.servedStats.getValueRate(stor::MonitoredQuantity::RECENT) +
+        dcmcStats.servedStats.getValueRate(stor::MonitoredQuantity::RECENT)) / 1024
+    );
+  }
+  
+  
+  void SMPSWebPageHelper::addRowForEventType
+  (
+    stor::XHTMLMaker& maker,
+    stor::XHTMLMaker::Node* tableRow,
+    DataRetrieverMonitorCollection::DataRetrieverSummaryStats::EventTypeStats const& stats
+  ) const
+  {
+    // Event type
+    stor::XHTMLMaker::Node* tableDiv = maker.addNode("td", tableRow);
+    stor::XHTMLMaker::Node* pre = maker.addNode("pre", tableDiv);
+    std::ostringstream eventType;
+    stats.first->eventType(eventType);
+    maker.addText(pre, eventType.str());
+
+    // Average event size
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, stats.second.getValueAverage(stor::MonitoredQuantity::FULL));
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, stats.second.getValueAverage(stor::MonitoredQuantity::RECENT));
+
+    // Input event rate
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, stats.second.getSampleRate(stor::MonitoredQuantity::FULL));
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, stats.second.getSampleRate(stor::MonitoredQuantity::RECENT));
+
+    // Input bandwidth
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, stats.second.getValueRate(stor::MonitoredQuantity::FULL));
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, stats.second.getValueRate(stor::MonitoredQuantity::RECENT));
+
+    // Get statistics for consumers requesting this event type
+    std::vector<stor::QueueID> queueIDs;
+    _stateMachine->getDataManager()->getQueueIDsForEventType(stats.first, queueIDs);
+
+    if ( queueIDs.empty() )
+    {
+      stor::XHTMLMaker::AttrMap noConsumersAttr = _tableLabelAttr;
+      noConsumersAttr[ "colspan" ] = "4";
+      tableDiv = maker.addNode("td", tableRow, noConsumersAttr);
+      maker.addText(tableDiv, "no consumers connected");
+      return;
+    }
+    const stor::EventConsumerMonitorCollection& ecmc =
+      _stateMachine->getStatisticsReporter()->getEventConsumerMonitorCollection();
+    const stor::DQMConsumerMonitorCollection& dcmc =
+      _stateMachine->getStatisticsReporter()->getDQMConsumerMonitorCollection();
+
+    double rateOverall = 0;
+    double rateRecent = 0;
+    double bandwidthOverall = 0;
+    double bandwidthRecent = 0;
+
+    for ( std::vector<stor::QueueID>::const_iterator it = queueIDs.begin(),
+            itEnd = queueIDs.end(); it != itEnd; ++it)
+    {
+      stor::MonitoredQuantity::Stats result;
+      if ( ecmc.getServed(*it, result) || dcmc.getServed(*it, result) )
+      {
+        rateOverall += result.getSampleRate(stor::MonitoredQuantity::FULL);
+        rateRecent += result.getSampleRate(stor::MonitoredQuantity::RECENT);
+        bandwidthOverall += result.getValueRate(stor::MonitoredQuantity::FULL) / 1024;
+        bandwidthRecent += result.getValueRate(stor::MonitoredQuantity::RECENT) / 1024;
+      }
+    }
+
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, rateOverall);
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, rateRecent);
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, bandwidthOverall);
+    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
+    maker.addDouble(tableDiv, bandwidthRecent);
+  }
+  
+  
   void SMPSWebPageHelper::addDOMforEventServers
   (
     stor::XHTMLMaker& maker,
     stor::XHTMLMaker::Node* parent
-  )
+  ) const
   {
     stor::XHTMLMaker::AttrMap colspanAttr;
-    colspanAttr[ "colspan" ] = "15";
+    colspanAttr[ "colspan" ] = "10";
     
     stor::XHTMLMaker::Node* table = maker.addNode("table", parent, _tableAttr);
     
@@ -166,17 +474,7 @@ namespace smproxy
     tableDiv = maker.addNode("th", tableRow, rowspanAttr);
     maker.addText(tableDiv, "Status");
     tableDiv = maker.addNode("th", tableRow, rowspanAttr);
-    maker.addText(tableDiv, "HLT Output Module");
-    tableDiv = maker.addNode("th", tableRow, rowspanAttr);
-    maker.addText(tableDiv, "Filters");
-    tableDiv = maker.addNode("th", tableRow, rowspanAttr);
-    maker.addText(tableDiv, "Prescale");
-    tableDiv = maker.addNode("th", tableRow, rowspanAttr);
-    maker.addText(tableDiv, "Unique Events");
-    tableDiv = maker.addNode("th", tableRow, rowspanAttr);
-    maker.addText(tableDiv, "Enquing Policy");
-    tableDiv = maker.addNode("th", tableRow, rowspanAttr);
-    maker.addText(tableDiv, "Queue Size");
+    maker.addText(tableDiv, "Requested Event Type");
     tableDiv = maker.addNode("th", tableRow, rowspanAttr);
     maker.addText(tableDiv, "Max Request Rate (Hz)");
     tableDiv = maker.addNode("th", tableRow, subColspanAttr);
@@ -242,11 +540,11 @@ namespace smproxy
     stor::XHTMLMaker& maker,
     stor::XHTMLMaker::Node* tableRow,
     DataRetrieverMonitorCollection::DataRetrieverStats const& stats
-  )
+  ) const
   {
     // Hostname
     stor::XHTMLMaker::Node* tableDiv = maker.addNode("td", tableRow, _tableLabelAttr);
-    const std::string sourceURL = stats.pset.getParameter<std::string>("sourceURL");
+    const std::string sourceURL = stats.eventConsRegPtr->remoteHost();
     std::string::size_type startPos = sourceURL.find("//");
     if ( startPos == std::string::npos )
       startPos = 0; 
@@ -275,58 +573,20 @@ namespace smproxy
       maker.addText(tableDiv, status.str());
     }
 
-    // HLT output module
+    // Requested event type
     tableDiv = maker.addNode("td", tableRow, _tableLabelAttr);
-    const std::string outputModule = stats.pset.getUntrackedParameter<std::string>("SelectHLTOutput");
-    maker.addText(tableDiv, outputModule);
-
-    // Filter list:
-    std::string filters = stats.pset.getUntrackedParameter<std::string>("TriggerSelector");
-    if ( filters.empty() )
-    {
-      const Strings fl = stats.pset.getParameter<Strings>("TrackedEventSelection");
-      for( Strings::const_iterator
-             lit = fl.begin(), litEnd = fl.end();
-           lit != litEnd; ++lit )
-      {
-        if( lit != fl.begin() ) filters += "  ";
-        filters += *lit;
-      }
-    }
-    tableDiv = maker.addNode("td", tableRow, _tableLabelAttr);
-    maker.addText(tableDiv, filters);
-  
-    // Prescale:
-    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
-    const int prescale = stats.pset.getUntrackedParameter<int>("prescale");
-    maker.addInt(tableDiv, prescale);
-    
-    // Unique events
-    tableDiv = maker.addNode("td", tableRow, _tableLabelAttr);
-    const bool uniqueEvents = stats.pset.getUntrackedParameter<bool>("uniqueEvents");
-    maker.addBool(tableDiv, uniqueEvents);
-    
-    // Policy
-    tableDiv = maker.addNode("td", tableRow, _tableLabelAttr);
-    const std::string policy = stats.pset.getUntrackedParameter<std::string>("queuePolicy");
-    maker.addText(tableDiv, policy);
-    
-    // Queue size
-    tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
-    const int queueSize = stats.pset.getUntrackedParameter<int>("queueSize");
-    maker.addInt(tableDiv, queueSize);
+    stor::XHTMLMaker::Node* pre = maker.addNode("pre", tableDiv);
+    std::ostringstream eventType;
+    stats.eventConsRegPtr->eventType(eventType);
+    maker.addText(pre, eventType.str());
 
     // Max request rate
     tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
-    try
-    {
-      const double rate = stats.pset.getUntrackedParameter<double>("maxEventRequestRate");
-      maker.addDouble(tableDiv, rate, 1);
-    }
-    catch (edm::Exception& e)
-    {
+    const stor::utils::duration_t interval = stats.eventConsRegPtr->minEventRequestInterval();
+    if ( interval.is_not_a_date_time() )
       maker.addText(tableDiv, "unlimited");
-    }
+    else
+      maker.addDouble(tableDiv, 1 / stor::utils::duration_to_seconds(interval), 1);
 
     // Event rate
     tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
@@ -352,7 +612,7 @@ namespace smproxy
   (
     stor::XHTMLMaker& maker,
     stor::XHTMLMaker::Node* parent
-  )
+  ) const
   {
   }
   

@@ -1,4 +1,4 @@
-// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.1 2011/01/26 16:06:54 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.2 2011/02/08 16:51:51 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.cc
 
 #include <string>
@@ -19,10 +19,12 @@ _updateInterval(updateInterval)
 
 ConnectionID DataRetrieverMonitorCollection::addNewConnection(const edm::ParameterSet& pset)
 {
-  boost::mutex::scoped_lock sl(_retrieverStatsMutex);
+  boost::mutex::scoped_lock sl(_statsMutex);
   ++_nextConnectionId;
-  DataRetrieverMQPtr dataRetrieverMQ( new DataRetrieverMQ(pset, _updateInterval) );
-  _retrieverStats.insert(RetrieverStatMap::value_type(_nextConnectionId, dataRetrieverMQ));
+  const std::string sourceURL = pset.getParameter<std::string>("sourceURL");
+  stor::EventConsRegPtr ecrp( new stor::EventConsumerRegistrationInfo("", sourceURL, pset));
+  DataRetrieverMQPtr dataRetrieverMQ( new DataRetrieverMQ(ecrp, _updateInterval) );
+  _retrieverMqMap.insert(RetrieverMqMap::value_type(_nextConnectionId, dataRetrieverMQ));
   return _nextConnectionId;
 }
 
@@ -33,27 +35,24 @@ bool DataRetrieverMonitorCollection::setConnectionStatus
   const ConnectionStatus& status
 )
 {
-  boost::mutex::scoped_lock sl(_retrieverStatsMutex);
-  RetrieverStatMap::const_iterator pos = _retrieverStats.find(connectionId);
-  if ( pos == _retrieverStats.end() ) return false;
+  boost::mutex::scoped_lock sl(_statsMutex);
+  RetrieverMqMap::const_iterator pos = _retrieverMqMap.find(connectionId);
+  if ( pos == _retrieverMqMap.end() ) return false;
   pos->second->_connectionStatus = status;
   return true;
 }
 
 
-void DataRetrieverMonitorCollection::updatePSet
+void DataRetrieverMonitorCollection::updateConsumerInfo
 (
-  const edm::ParameterSet& pset
+  const stor::EventConsRegPtr eventConsRegPtr
 )
 {
-  boost::mutex::scoped_lock sl(_retrieverStatsMutex);
-  for (RetrieverStatMap::const_iterator it = _retrieverStats.begin(),
-         itEnd = _retrieverStats.end(); it != itEnd; ++it)
+  boost::mutex::scoped_lock sl(_statsMutex);
+  for (RetrieverMqMap::const_iterator it = _retrieverMqMap.begin(),
+         itEnd = _retrieverMqMap.end(); it != itEnd; ++it)
   {
-    const std::string sourceURL = 
-      it->second->_pset.getParameter<std::string>("sourceURL");
-    it->second->_pset = pset;
-    it->second->_pset.addParameter<std::string>("sourceURL", sourceURL);
+    it->second->_eventConsRegPtr = eventConsRegPtr;
   }
 }
 
@@ -64,36 +63,80 @@ bool DataRetrieverMonitorCollection::addRetrievedSample
   const unsigned int& size
 )
 {
-  boost::mutex::scoped_lock sl(_retrieverStatsMutex);
+  boost::mutex::scoped_lock sl(_statsMutex);
 
-  RetrieverStatMap::const_iterator pos = _retrieverStats.find(connectionId);
-  if ( pos == _retrieverStats.end() ) return false;
+  RetrieverMqMap::const_iterator retrieverPos = _retrieverMqMap.find(connectionId);
+  if ( retrieverPos == _retrieverMqMap.end() ) return false;
 
   const double sizeKB = static_cast<double>(size) / 1024;
-  pos->second->_size.addSample(sizeKB);
+  retrieverPos->second->_size.addSample(sizeKB);
+
+  stor::EventConsRegPtr ecrp = retrieverPos->second->_eventConsRegPtr;
+
+  EventTypeMqMap::iterator eventTypePos = _eventTypeMqMap.lower_bound(ecrp);
+  
+  if (eventTypePos == _eventTypeMqMap.end() || (_eventTypeMqMap.key_comp()(ecrp, eventTypePos->first)))
+  {
+    // The key does not exist in the map, add it to the map
+    // Use pos as a hint to insert, so it can avoid another lookup
+    eventTypePos = _eventTypeMqMap.insert(eventTypePos,
+      EventTypeMqMap::value_type(ecrp,
+        stor::MonitoredQuantityPtr(
+          new stor::MonitoredQuantity( _updateInterval, boost::posix_time::seconds(60) )
+        )
+      )
+    );
+  }
+  eventTypePos->second->addSample(sizeKB);
+
   _totalSize.addSample(sizeKB);
 
   return true;
 }
 
 
-void DataRetrieverMonitorCollection::getTotalStats(DataRetrieverStats& stats) const
+void DataRetrieverMonitorCollection::getSummaryStats(DataRetrieverSummaryStats& stats) const
 {
+  boost::mutex::scoped_lock sl(_statsMutex);
+
+  stats.registeredSMs = 0;
+  stats.activeSMs = 0;
+
+  for (RetrieverMqMap::const_iterator it = _retrieverMqMap.begin(),
+         itEnd = _retrieverMqMap.end(); it != itEnd; ++it)
+  {
+    ++stats.registeredSMs;
+    if ( it->second->_connectionStatus == CONNECTED )
+      ++stats.activeSMs;
+  }
+  
+  stats.eventTypeStats.clear();
+  stats.eventTypeStats.reserve(_eventTypeMqMap.size());
+  
+  for (EventTypeMqMap::const_iterator it = _eventTypeMqMap.begin(),
+         itEnd = _eventTypeMqMap.end(); it != itEnd; ++it)
+  {
+    stor::MonitoredQuantity::Stats etStats;
+    it->second->getStats(etStats);
+    stats.eventTypeStats.push_back(
+      std::make_pair(it->first, etStats));
+  }
+  
   _totalSize.getStats(stats.sizeStats);
 }
 
 
 void DataRetrieverMonitorCollection::getStatsByConnection(DataRetrieverStatList& drsl) const
 {
-  boost::mutex::scoped_lock sl(_retrieverStatsMutex);
+  boost::mutex::scoped_lock sl(_statsMutex);
   drsl.clear();
 
-  for (RetrieverStatMap::const_iterator it = _retrieverStats.begin(),
-         itEnd = _retrieverStats.end(); it != itEnd; ++it)
+  for (RetrieverMqMap::const_iterator it = _retrieverMqMap.begin(),
+         itEnd = _retrieverMqMap.end(); it != itEnd; ++it)
   {
     const DataRetrieverMQPtr mq = it->second;
     DataRetrieverStats stats;
-    stats.pset = mq->_pset;
+    stats.eventConsRegPtr = mq->_eventConsRegPtr;
     stats.connectionStatus = mq->_connectionStatus;
     mq->_size.getStats(stats.sizeStats);
     drsl.push_back(stats);
@@ -104,32 +147,39 @@ void DataRetrieverMonitorCollection::getStatsByConnection(DataRetrieverStatList&
 
 void DataRetrieverMonitorCollection::do_calculateStatistics()
 {
+  boost::mutex::scoped_lock sl(_statsMutex);
+
   _totalSize.calculateStatistics();
 
-  boost::mutex::scoped_lock sl(_retrieverStatsMutex);
-  for (RetrieverStatMap::const_iterator it = _retrieverStats.begin(),
-         itEnd = _retrieverStats.end(); it != itEnd; ++it)
+  for (RetrieverMqMap::const_iterator it = _retrieverMqMap.begin(),
+         itEnd = _retrieverMqMap.end(); it != itEnd; ++it)
   {
     it->second->_size.calculateStatistics();
+  }
+
+  for (EventTypeMqMap::iterator it = _eventTypeMqMap.begin(),
+         itEnd = _eventTypeMqMap.end(); it != itEnd; ++it)
+  {
+    it->second->calculateStatistics();
   }
 }
 
 
 void DataRetrieverMonitorCollection::do_reset()
 {
+  boost::mutex::scoped_lock sl(_statsMutex);
   _totalSize.reset();
-
-  boost::mutex::scoped_lock sl(_retrieverStatsMutex);
-  _retrieverStats.clear();
+  _retrieverMqMap.clear();
+  _eventTypeMqMap.clear();
 }
 
 
 DataRetrieverMonitorCollection::DataRetrieverMQ::DataRetrieverMQ
 (
-  const edm::ParameterSet& pset,
+  const stor::EventConsRegPtr eventConsRegPtr,
   const stor::utils::duration_t& updateInterval
 ):
-_pset(pset),
+_eventConsRegPtr(eventConsRegPtr),
 _connectionStatus(UNKNOWN),
 _size(updateInterval, boost::posix_time::seconds(60))
 {}

@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.12 2011/02/08 16:51:51 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.13 2011/02/10 10:20:57 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -62,7 +62,7 @@ namespace smproxy
   {
     if ( adjustMinEventRequestInterval( consumer->minEventRequestInterval() ) )
     {
-      _dataRetrieverMonitorCollection.updatePSet( consumer->getPSet() ); 
+      _dataRetrieverMonitorCollection.updateConsumerInfo( consumer ); 
     }
 
     boost::mutex::scoped_lock sl(_queueIDsLock);

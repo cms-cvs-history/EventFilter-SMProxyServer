@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.7 2011/01/27 14:55:54 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.8 2011/02/04 13:46:00 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -47,6 +47,21 @@ namespace smproxy
 
     edm::shutdown_flag = true;
     _eventRetrievers.clear();
+  }
+  
+  
+  bool DataManager::getQueueIDsForEventType
+  (
+    stor::EventConsRegPtr ecrp,
+    std::vector<stor::QueueID>& queueIDs
+  ) const
+  {
+    EventRetrieverMap::const_iterator pos =
+      _eventRetrievers.find(ecrp);
+    if ( pos == _eventRetrievers.end() ) return false;
+
+    queueIDs = pos->second->getQueueIDs();
+    return true;
   }
   
   

@@ -1,4 +1,4 @@
-// $Id: StateMachine.h,v 1.1.2.4 2011/01/25 17:04:15 mommsen Exp $
+// $Id: StateMachine.h,v 1.1.2.5 2011/02/10 10:20:57 mommsen Exp $
 /// @file: StateMachine.h 
 
 #ifndef EventFilter_SMProxyServer_StateMachine_h
@@ -90,6 +90,8 @@ namespace smproxy
 
     ConfigurationPtr getConfiguration() const
     { return _configuration; }
+    DataManagerPtr getDataManager() const
+    { return _dataManager; }
     stor::RegistrationCollectionPtr getRegistrationCollection() const
     { return _registrationCollection; }
     stor::RegistrationQueuePtr getRegistrationQueue() const
@@ -119,14 +121,13 @@ namespace smproxy
     xdaq::Application* _app;
     xdaq2rc::RcmsStateNotifier _rcmsStateNotifier;
     ConfigurationPtr _configuration;
+    DataManagerPtr _dataManager;
     stor::RegistrationCollectionPtr _registrationCollection;
     stor::RegistrationQueuePtr _registrationQueue;
     stor::InitMsgCollectionPtr _initMsgCollection;
     StatisticsReporterPtr _statisticsReporter;
     EventQueueCollectionPtr _eventQueueCollection;
     stor::DQMEventQueueCollectionPtr _dqmEventQueueCollection;
-
-    boost::scoped_ptr<DataManager> _dataManager;
 
     mutable boost::mutex _eventMutex;
     

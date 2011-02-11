@@ -1,4 +1,4 @@
-// $Id: DataManager.h,v 1.1.2.5 2011/01/26 16:06:54 mommsen Exp $
+// $Id: DataManager.h,v 1.1.2.6 2011/01/27 14:55:54 mommsen Exp $
 /// @file: DataManager.h 
 
 #ifndef EventFilter_SMProxyServer_DataManager_h
@@ -26,8 +26,8 @@ namespace smproxy {
    * Manages the data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.5 $
-   * $Date: 2011/01/26 16:06:54 $
+   * $Revision: 1.1.2.6 $
+   * $Date: 2011/01/27 14:55:54 $
    */
   
   class DataManager
@@ -47,6 +47,12 @@ namespace smproxy {
      * Stop retrieving data
      */
     void stop();
+
+    /**
+     * Get list of consumer queueIDs for given event type.
+     * Returns false if the event type is not found.
+     */
+    bool getQueueIDsForEventType(stor::EventConsRegPtr, std::vector<stor::QueueID>&) const;
 
 
   private:
@@ -71,6 +77,8 @@ namespace smproxy {
     EventRetrieverMap _eventRetrievers;
 
   };
+
+  typedef boost::shared_ptr<DataManager> DataManagerPtr;
   
 } // namespace smproxy
 
