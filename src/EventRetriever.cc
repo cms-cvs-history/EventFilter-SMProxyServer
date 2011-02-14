@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.13 2011/02/10 10:20:57 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.14 2011/02/11 12:13:44 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
@@ -253,7 +253,7 @@ namespace smproxy
         _nextSMtoUse->second->getInitMsg(data);
         InitMsgView initMsgView(&data[0]);
         _stateMachine->getInitMsgCollection()->addIfUnique(initMsgView);
-        break;
+        return;
       }
       catch (cms::Exception& e)
       {
@@ -262,6 +262,8 @@ namespace smproxy
       }
     }
     while (_nextSMtoUse != _eventServers.end());
+
+    XCEPT_RAISE(exception::DataRetrieval, "Lost connection to all SMs");
   }
   
   
