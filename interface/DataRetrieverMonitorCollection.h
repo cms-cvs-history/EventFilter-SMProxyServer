@@ -1,4 +1,4 @@
-// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.2 2011/02/08 16:51:51 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.3 2011/02/11 12:13:44 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.h 
 
 #ifndef EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
@@ -24,8 +24,8 @@ namespace smproxy {
    * A collection of MonitoredQuantities related to data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.2 $
-   * $Date: 2011/02/08 16:51:51 $
+   * $Revision: 1.1.2.3 $
+   * $Date: 2011/02/11 12:13:44 $
    */
   
   class DataRetrieverMonitorCollection : public stor::MonitorCollection
@@ -34,7 +34,7 @@ namespace smproxy {
 
     enum ConnectionStatus { CONNECTED, CONNECTION_FAILED, DISCONNECTED, UNKNOWN };
     
-    struct DataRetrieverSummaryStats
+    struct SummaryStats
     {
       size_t registeredSMs;
       size_t activeSMs;
@@ -45,16 +45,17 @@ namespace smproxy {
       EventTypeStatList eventTypeStats;
     };
 
-    struct DataRetrieverStats
+    typedef std::map<std::string, stor::MonitoredQuantity::Stats> ConnectionStats;
+
+    struct EventTypeStats
     {
       stor::EventConsRegPtr eventConsRegPtr;
       ConnectionStatus connectionStatus;
       stor::MonitoredQuantity::Stats sizeStats;         //kB
 
-      bool operator<(const DataRetrieverStats& other) const
-      { return ( eventConsRegPtr->remoteHost() < other.eventConsRegPtr->remoteHost() ); }
+      bool operator<(const EventTypeStats&) const;
     };
-    typedef std::vector<DataRetrieverStats> DataRetrieverStatList;
+    typedef std::vector<EventTypeStats> EventTypeStatList;
     
     
     explicit DataRetrieverMonitorCollection(const stor::utils::duration_t& updateInterval);
@@ -82,14 +83,19 @@ namespace smproxy {
     bool addRetrievedSample(const ConnectionID&, const unsigned int& size);
     
     /**
-     * Write the data retrieval summary statistics into the given Stats struct.
+     * Write the data retrieval summary statistics into the given struct.
      */
-    void getSummaryStats(DataRetrieverSummaryStats&) const;
+    void getSummaryStats(SummaryStats&) const;
 
     /**
-     * Write the data retrieval statistics for the given connectionID into the Stats struct.
+     * Write the data retrieval statistics for each connection into the given struct.
      */
-    void getStatsByConnection(DataRetrieverStatList&) const;
+    void getStatsByConnection(ConnectionStats&) const;
+
+    /**
+     * Write the data retrieval statistics for each event type request into the given struct.
+     */
+    void getStatsByEventTypes(EventTypeStatList&) const;
     
 
   private:
@@ -117,7 +123,10 @@ namespace smproxy {
     typedef boost::shared_ptr<DataRetrieverMQ> DataRetrieverMQPtr;
     typedef std::map<ConnectionID, DataRetrieverMQPtr> RetrieverMqMap;
     RetrieverMqMap _retrieverMqMap;
-    
+
+    typedef std::map<std::string, stor::MonitoredQuantityPtr> ConnectionMqMap;
+    ConnectionMqMap _connectionMqMap;
+
     typedef std::map<stor::EventConsRegPtr, stor::MonitoredQuantityPtr,
                      stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo>
                      > EventTypeMqMap;

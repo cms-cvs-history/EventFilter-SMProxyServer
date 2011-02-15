@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.h,v 1.1.2.3 2011/02/09 11:47:04 mommsen Exp $
+// $Id: SMPSWebPageHelper.h,v 1.1.2.4 2011/02/11 12:13:44 mommsen Exp $
 /// @file: SMPSWebPageHelper.h
 
 #ifndef EventFilter_SMProxyServer_SMPSWebPageHelper_h
@@ -16,8 +16,8 @@ namespace smproxy {
    * Helper class to handle SM proxy server web page requests
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.3 $
-   * $Date: 2011/02/09 11:47:04 $
+   * $Revision: 1.1.2.4 $
+   * $Date: 2011/02/11 12:13:44 $
    */
   
   class SMPSWebPageHelper : public stor::WebPageHelper<SMPSWebPageHelper>
@@ -65,17 +65,17 @@ namespace smproxy {
     (
       stor::XHTMLMaker&,
       stor::XHTMLMaker::Node* parent,
-      const DataRetrieverMonitorCollection::DataRetrieverSummaryStats&
+      const DataRetrieverMonitorCollection::SummaryStats&
     ) const;
 
     /**
-     * Adds the summary throuphput of the event server to the parent DOM element
+     * Adds the summary throuphput per event type to the parent DOM element
      */
-    void addDOMforThroughput
+    void addDOMforThroughputPerEventType
     (
       stor::XHTMLMaker&,
       stor::XHTMLMaker::Node* parent,
-      const DataRetrieverMonitorCollection::DataRetrieverSummaryStats&
+      const DataRetrieverMonitorCollection::SummaryStats&
     ) const;
  
     /**
@@ -85,7 +85,17 @@ namespace smproxy {
     (
       stor::XHTMLMaker&,
       stor::XHTMLMaker::Node* table,
-      DataRetrieverMonitorCollection::DataRetrieverSummaryStats::EventTypeStats const&
+      DataRetrieverMonitorCollection::SummaryStats::EventTypeStats const&
+    ) const;
+ 
+    /**
+     * Adds a table row for the summary throughput
+     */
+    void addSummaryRowForThroughput
+    (
+      stor::XHTMLMaker&,
+      stor::XHTMLMaker::Node* table,
+      DataRetrieverMonitorCollection::SummaryStats const&
     ) const;
 
     /**
@@ -104,7 +114,27 @@ namespace smproxy {
     (
       stor::XHTMLMaker&,
       stor::XHTMLMaker::Node* table,
-      DataRetrieverMonitorCollection::DataRetrieverStats const&
+      DataRetrieverMonitorCollection::EventTypeStats const&
+    ) const;
+ 
+    /**
+     * Adds a summary table row for each event server
+     */
+    void addSummaryRowForEventServer
+    (
+      stor::XHTMLMaker&,
+      stor::XHTMLMaker::Node* table,
+      DataRetrieverMonitorCollection::ConnectionStats::const_iterator
+    ) const;
+ 
+    /**
+     * Adds a table cell for the SM host
+     */
+    void addDOMforSMhost
+    (
+      stor::XHTMLMaker&,
+      stor::XHTMLMaker::Node* tableRow,
+      const std::string& sourceURL
     ) const;
 
     /**

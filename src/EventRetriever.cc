@@ -1,6 +1,7 @@
 // $Id: EventRetriever.cc,v 1.1.2.14 2011/02/11 12:13:44 mommsen Exp $
 /// @file: EventRetriever.cc
 
+#include "EventFilter/StorageManager/interface/CurlInterface.h"
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
 #include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
@@ -196,7 +197,7 @@ namespace smproxy
       
       // each event retriever shall start from a different SM
       size_t smInstance = (_instance + i) % smCount;
-      std::string sourceURL = _dataRetrieverParams._smRegistrationList[smInstance];
+      std::string sourceURL = _dataRetrieverParams._smRegistrationList.at(smInstance);
       connectToSM(sourceURL);
     }
 
@@ -249,7 +250,7 @@ namespace smproxy
     {
       try
       {
-        std::string data;
+        stor::CurlInterface::Content data;
         _nextSMtoUse->second->getInitMsg(data);
         InitMsgView initMsgView(&data[0]);
         _stateMachine->getInitMsgCollection()->addIfUnique(initMsgView);
@@ -271,7 +272,7 @@ namespace smproxy
   {
     stor::utils::sleepUntil(_nextRequestTime);
 
-    std::string data;
+    stor::CurlInterface::Content data;
     size_t tries = 0;
 
     while ( ! edm::shutdown_flag && data.empty() )
