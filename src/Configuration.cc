@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.5 2011/01/27 14:54:06 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.6 2011/02/11 16:44:52 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -14,9 +14,7 @@ namespace smproxy
   (
     xdata::InfoSpace* infoSpace,
     unsigned long instanceNumber
-  )// :
-  //_infospaceRunNumber(0),
-  //_localRunNumber(0)
+  )
   {
     // default values are used to initialize infospace values,
     // so they should be set first
@@ -30,11 +28,6 @@ namespace smproxy
     setupEventServingInfoSpaceParams(infoSpace);
     setupQueueConfigurationInfoSpaceParams(infoSpace);
   }
-
-  // unsigned int Configuration::getRunNumber() const
-  // {
-  //   return _localRunNumber;
-  // }
 
   struct DataRetrieverParams Configuration::getDataRetrieverParams() const
   {
@@ -63,7 +56,6 @@ namespace smproxy
   void Configuration::updateAllParams()
   {
     boost::mutex::scoped_lock sl(_generalMutex);
-    //updateLocalRunData();
     updateLocalDataRetrieverData();
     updateLocalDQMProcessingData();
     updateLocalEventServingData();
@@ -118,16 +110,6 @@ namespace smproxy
     _queueConfigParamCopy._registrationQueueSize = 128;
     _queueConfigParamCopy._monitoringSleepSec = boost::posix_time::seconds(1);
   }
-
-  // void Configuration::
-  // setupRunInfoSpaceParams(xdata::InfoSpace* infoSpace)
-  // {
-  //   // copy the initial defaults into the xdata variables
-  //   _infospaceRunNumber = _localRunNumber;
-
-  //   // bind the local xdata variables to the infospace
-  //   //infoSpace->fireItemAvailable("runNumber", &_infospaceRunNumber);
-  // }
 
   void Configuration::
   setupDataRetrieverInfoSpaceParams(xdata::InfoSpace* infoSpace)
@@ -206,11 +188,6 @@ namespace smproxy
     infoSpace->fireItemAvailable("monitoringSleepSec", &_monitoringSleepSec);
   }
  
-  // void Configuration::updateLocalRunData()
-  // {
-  //   _localRunNumber = _infospaceRunNumber;
-  // }
-
   void Configuration::updateLocalDataRetrieverData()
   {
     stor::utils::getStdVector(_smRegistrationList, _dataRetrieverParamCopy._smRegistrationList);
