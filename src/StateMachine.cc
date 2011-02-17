@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.7 2011/01/26 16:06:54 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.8 2011/01/27 14:55:54 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -43,6 +43,8 @@ namespace smproxy
     _rcmsStateNotifier.findRcmsStateListener();
     _rcmsStateNotifier.subscribeToChangesInRcmsStateListener(is);
   
+    is->fireItemAvailable("stateName", &_stateName);
+
     initiate();
 
     _configuration.reset(new Configuration(
