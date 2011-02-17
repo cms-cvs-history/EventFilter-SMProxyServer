@@ -1,4 +1,4 @@
-// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.3 2011/02/11 12:13:44 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.4 2011/02/15 14:06:53 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.h 
 
 #ifndef EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
@@ -24,8 +24,8 @@ namespace smproxy {
    * A collection of MonitoredQuantities related to data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.3 $
-   * $Date: 2011/02/11 12:13:44 $
+   * $Revision: 1.1.2.4 $
+   * $Date: 2011/02/15 14:06:53 $
    */
   
   class DataRetrieverMonitorCollection : public stor::MonitorCollection
@@ -64,7 +64,7 @@ namespace smproxy {
      * Add a new  server connection.
      * Returns an unique connection ID.
      */
-    ConnectionID addNewConnection(const edm::ParameterSet&);
+    ConnectionID addNewConnection(const stor::EventConsRegPtr);
 
     /**
      * Set status of given connection. Returns false if the ConnectionID is unknown.
@@ -72,9 +72,10 @@ namespace smproxy {
     bool setConnectionStatus(const ConnectionID&, const ConnectionStatus&);
 
     /**
-     * Replace the consumer registration info for all connections
+     * Put the event type statistics for the given consumer ID into
+     * the passed EventTypeStats. Return false if the connection ID is not found.
      */
-    void updateConsumerInfo(const stor::EventConsRegPtr);
+    bool getEventTypeStatsForConnection(const ConnectionID&, EventTypeStats&);
 
     /**
      * Add a retrieved  sample in Bytes from the given connection.

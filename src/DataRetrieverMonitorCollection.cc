@@ -1,4 +1,4 @@
-// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.3 2011/02/11 12:13:44 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.4 2011/02/15 14:06:53 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.cc
 
 #include <string>
@@ -17,12 +17,10 @@ _updateInterval(updateInterval)
 {}
 
 
-ConnectionID DataRetrieverMonitorCollection::addNewConnection(const edm::ParameterSet& pset)
+ConnectionID DataRetrieverMonitorCollection::addNewConnection(const stor::EventConsRegPtr ecrp)
 {
   boost::mutex::scoped_lock sl(_statsMutex);
   ++_nextConnectionId;
-  const std::string sourceURL = pset.getParameter<std::string>("sourceURL");
-  stor::EventConsRegPtr ecrp( new stor::EventConsumerRegistrationInfo("", sourceURL, pset));
 
   DataRetrieverMQPtr dataRetrieverMQ( new DataRetrieverMQ(ecrp, _updateInterval) );
   _retrieverMqMap.insert(RetrieverMqMap::value_type(_nextConnectionId, dataRetrieverMQ));
@@ -33,7 +31,7 @@ ConnectionID DataRetrieverMonitorCollection::addNewConnection(const edm::Paramet
       )
     ));
   
-  _connectionMqMap.insert(ConnectionMqMap::value_type(sourceURL,
+  _connectionMqMap.insert(ConnectionMqMap::value_type(ecrp->sourceURL(),
       stor::MonitoredQuantityPtr(
         new stor::MonitoredQuantity(_updateInterval, boost::posix_time::seconds(60))
       )
@@ -57,22 +55,22 @@ bool DataRetrieverMonitorCollection::setConnectionStatus
 }
 
 
-void DataRetrieverMonitorCollection::updateConsumerInfo
+bool DataRetrieverMonitorCollection::getEventTypeStatsForConnection
 (
-  const stor::EventConsRegPtr eventConsRegPtr
+  const ConnectionID& connectionId,
+  EventTypeStats& stats
 )
 {
   boost::mutex::scoped_lock sl(_statsMutex);
-  const edm::ParameterSet pset = eventConsRegPtr->getPSet();
+  RetrieverMqMap::const_iterator pos = _retrieverMqMap.find(connectionId);
 
-  for (RetrieverMqMap::const_iterator it = _retrieverMqMap.begin(),
-         itEnd = _retrieverMqMap.end(); it != itEnd; ++it)
-  {
-    const std::string remoteHost = it->second->_eventConsRegPtr->remoteHost();
-    it->second->_eventConsRegPtr.reset(
-      new stor::EventConsumerRegistrationInfo("", remoteHost, pset)
-    );
-  }
+  if ( pos == _retrieverMqMap.end() ) return false;
+
+  stats.eventConsRegPtr = pos->second->_eventConsRegPtr;
+  stats.connectionStatus = pos->second->_connectionStatus;
+  pos->second->_size.getStats(stats.sizeStats);
+
+  return true;
 }
 
 
@@ -95,8 +93,8 @@ bool DataRetrieverMonitorCollection::addRetrievedSample
   EventTypeMqMap::const_iterator eventTypePos = _eventTypeMqMap.find(ecrp);
   eventTypePos->second->addSample(sizeKB);
 
-  const std::string remoteHost = ecrp->remoteHost();
-  ConnectionMqMap::const_iterator connectionPos = _connectionMqMap.find(remoteHost);
+  const std::string sourceURL = ecrp->sourceURL();
+  ConnectionMqMap::const_iterator connectionPos = _connectionMqMap.find(sourceURL);
   connectionPos->second->addSample(sizeKB);
   
   _totalSize.addSample(sizeKB);
@@ -208,8 +206,8 @@ void DataRetrieverMonitorCollection::do_reset()
 
 bool DataRetrieverMonitorCollection::EventTypeStats::operator<(const EventTypeStats& other) const
 {
-  if ( eventConsRegPtr->remoteHost() != other.eventConsRegPtr->remoteHost() )
-    return ( eventConsRegPtr->remoteHost() < other.eventConsRegPtr->remoteHost() );
+  if ( eventConsRegPtr->sourceURL() != other.eventConsRegPtr->sourceURL() )
+    return ( eventConsRegPtr->sourceURL() < other.eventConsRegPtr->sourceURL() );
   return ( *(eventConsRegPtr) < *(other.eventConsRegPtr) );
 }
 

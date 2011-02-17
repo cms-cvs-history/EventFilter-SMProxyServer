@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.9 2011/02/08 16:51:51 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.10 2011/02/11 12:13:44 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -32,8 +32,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.9 $
-   * $Date: 2011/02/08 16:51:51 $
+   * $Revision: 1.1.2.10 $
+   * $Date: 2011/02/11 12:13:44 $
    */
   
   class EventRetriever
@@ -43,7 +43,7 @@ namespace smproxy {
     EventRetriever
     (
       StateMachine*,
-      stor::EventConsRegPtr
+      const stor::EventConsRegPtr
     );
 
     ~EventRetriever();
@@ -51,7 +51,7 @@ namespace smproxy {
     /**
      * Add a consumer
      */
-    void addConsumer(stor::EventConsRegPtr);
+    void addConsumer(const stor::EventConsRegPtr);
 
     /**
      * Stop retrieving events
@@ -67,13 +67,16 @@ namespace smproxy {
  
   private:
 
-    void activity();
-    void doIt();
-    bool connect();
-    void connectToSM(const std::string& sourceURL);
+    void activity(const edm::ParameterSet&);
+    void doIt(const edm::ParameterSet&);
+    bool connect(const edm::ParameterSet&);
+    void connectToSM(const std::string& sourceURL, const edm::ParameterSet&);
+    bool openConnection(const ConnectionID&, const stor::EventConsRegPtr);
+    bool tryToReconnect();
     void getInitMsg();
     bool getNextEvent(EventMsg&);
     bool adjustMinEventRequestInterval(const stor::utils::duration_t&);
+    void updateConsumersSetting(const stor::utils::duration_t&);
     bool anyActiveConsumers(EventQueueCollectionPtr) const;
     void disconnectFromCurrentSM();
     
@@ -82,7 +85,6 @@ namespace smproxy {
     EventRetriever& operator=(EventRetriever const&);
 
     StateMachine* _stateMachine;
-    edm::ParameterSet _pset;
     const DataRetrieverParams _dataRetrieverParams;
     DataRetrieverMonitorCollection& _dataRetrieverMonitorCollection;
 
@@ -97,6 +99,12 @@ namespace smproxy {
     typedef std::map<ConnectionID, EventServerPtr> EventServers;
     EventServers _eventServers;
     EventServers::iterator _nextSMtoUse;
+
+    typedef std::vector<ConnectionID> ConnectionIDs;
+    ConnectionIDs _connectionIDs;
+    mutable boost::mutex _connectionIDsLock;
+
+    stor::utils::time_point_t _nextReconnectTry;
 
     typedef std::vector<stor::QueueID> QueueIDs;
     QueueIDs _queueIDs;

@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.7 2011/02/11 12:13:44 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.8 2011/02/15 14:06:53 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
@@ -549,13 +549,13 @@ namespace smproxy
       stor::XHTMLMaker::Node* tableRow = maker.addNode("tr", table, rowAttr);
       addRowForEventServer(maker, tableRow, *it);
       
-      const std::string currentRemoteHost = it->eventConsRegPtr->remoteHost();
+      const std::string currentSourceURL = it->eventConsRegPtr->sourceURL();
 
       if ( (it+1) == eventTypeStats.end() ||
-        (it+1)->eventConsRegPtr->remoteHost() != currentRemoteHost )
+        (it+1)->eventConsRegPtr->sourceURL() != currentSourceURL )
       {
         addSummaryRowForEventServer(maker, table,
-          connectionStats.find(currentRemoteHost));
+          connectionStats.find(currentSourceURL));
       }
     }
   }
@@ -571,7 +571,7 @@ namespace smproxy
     stor::XHTMLMaker::Node* tableDiv;
 
     // Hostname
-    addDOMforSMhost(maker, tableRow, stats.eventConsRegPtr->remoteHost());
+    addDOMforSMhost(maker, tableRow, stats.eventConsRegPtr->sourceURL());
 
     // Status
     if ( stats.connectionStatus == DataRetrieverMonitorCollection::CONNECTED )

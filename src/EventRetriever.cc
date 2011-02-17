@@ -20,35 +20,39 @@ namespace smproxy
   EventRetriever::EventRetriever
   (
     StateMachine* stateMachine,
-    stor::EventConsRegPtr consumer
+    const stor::EventConsRegPtr consumer
   ) :
   _stateMachine(stateMachine),
-  _pset(consumer->getPSet()),
   _dataRetrieverParams(stateMachine->getConfiguration()->getDataRetrieverParams()),
   _dataRetrieverMonitorCollection(stateMachine->getStatisticsReporter()->getDataRetrieverMonitorCollection()),
   _minEventRequestInterval(consumer->minEventRequestInterval()),
   _instance(++_retrieverCount)
   {
-    _pset.addUntrackedParameter<std::string>("consumerName",
+    edm::ParameterSet pset = consumer->getPSet();
+    pset.addUntrackedParameter<std::string>("consumerName",
       _stateMachine->getApplicationDescriptor()->getContextDescriptor()->getURL()+"/"+
-      _stateMachine->getApplicationDescriptor()->getURN());
+      _stateMachine->getApplicationDescriptor()->getURN()
+    );
 
     if ( _dataRetrieverParams._allowMissingSM )
     {
-      _pset.addUntrackedParameter<int>("maxConnectTries", 0);
+      pset.addUntrackedParameter<int>("maxConnectTries", 0);
     }
     else
     {
-      _pset.addUntrackedParameter<int>("maxConnectTries", _dataRetrieverParams._maxConnectionRetries);
-      _pset.addUntrackedParameter<int>("connectTrySleepTime", _dataRetrieverParams._connectTrySleepTime);
+      pset.addUntrackedParameter<int>("maxConnectTries", _dataRetrieverParams._maxConnectionRetries);
+      pset.addUntrackedParameter<int>("connectTrySleepTime", _dataRetrieverParams._connectTrySleepTime);
     }
-    _pset.addUntrackedParameter<int>("headerRetryInterval", _dataRetrieverParams._headerRetryInterval);
+
+    pset.addUntrackedParameter<int>("headerRetryInterval", _dataRetrieverParams._headerRetryInterval);
 
     _nextRequestTime = stor::utils::getCurrentTime();
+    _nextReconnectTry = _nextRequestTime +
+      stor::utils::seconds_to_duration(_dataRetrieverParams._connectTrySleepTime);
     _queueIDs.push_back(consumer->queueId());
 
     _thread.reset(
-      new boost::thread( boost::bind( &EventRetriever::activity, this) )
+      new boost::thread( boost::bind( &EventRetriever::activity, this, pset) )
     );
   }
   
@@ -59,12 +63,11 @@ namespace smproxy
   }
   
   
-  void EventRetriever::addConsumer(stor::EventConsRegPtr consumer)
+  void EventRetriever::addConsumer(const stor::EventConsRegPtr consumer)
   {
-    if ( adjustMinEventRequestInterval( consumer->minEventRequestInterval() ) )
-    {
-      _dataRetrieverMonitorCollection.updateConsumerInfo( consumer ); 
-    }
+    const stor::utils::duration_t& interval = consumer->minEventRequestInterval();
+    if ( adjustMinEventRequestInterval(interval) )
+      updateConsumersSetting(interval); 
 
     boost::mutex::scoped_lock sl(_queueIDsLock);
     _queueIDs.push_back(consumer->queueId());
@@ -99,23 +102,45 @@ namespace smproxy
 
     return false;
   }
+  
+  
+
+  void EventRetriever::updateConsumersSetting(const stor::utils::duration_t& newInterval)
+  {
+    boost::mutex::scoped_lock sl(_connectionIDsLock);
+
+    for (ConnectionIDs::const_iterator it = _connectionIDs.begin(),
+           itEnd = _connectionIDs.end();
+         it != itEnd; ++it)
+    {
+      DataRetrieverMonitorCollection::EventTypeStats eventTypeStats;
+      if ( _dataRetrieverMonitorCollection.
+        getEventTypeStatsForConnection(*it, eventTypeStats) )
+      {
+        eventTypeStats.eventConsRegPtr->setMinEventRequestInterval(newInterval);
+      }
+    }
+  }
 
   
   void EventRetriever::stop()
   {
     _thread->interrupt();
     _thread->join();
+
+    _eventServers.clear();
+    _connectionIDs.clear();
     
     boost::mutex::scoped_lock sl(_queueIDsLock);
     _queueIDs.clear();
   }
     
   
-  void EventRetriever::activity()
+  void EventRetriever::activity(const edm::ParameterSet& pset)
   {
     try
     {
-      doIt();
+      doIt(pset);
     }
     catch(boost::thread_interrupted)
     {
@@ -140,9 +165,9 @@ namespace smproxy
     }
   }
   
-  void EventRetriever::doIt()
+  void EventRetriever::doIt(const edm::ParameterSet& pset)
   {
-    connect();
+    connect(pset);
 
     getInitMsg();
 
@@ -165,6 +190,7 @@ namespace smproxy
       }
       else
       {
+        tryToReconnect();
         boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
       }
     }
@@ -186,7 +212,7 @@ namespace smproxy
   }
   
   
-  bool EventRetriever::connect()
+  bool EventRetriever::connect(const edm::ParameterSet& pset)
   {
     size_t smCount = _dataRetrieverParams._smRegistrationList.size();
     _eventServers.clear();
@@ -198,7 +224,7 @@ namespace smproxy
       // each event retriever shall start from a different SM
       size_t smInstance = (_instance + i) % smCount;
       std::string sourceURL = _dataRetrieverParams._smRegistrationList.at(smInstance);
-      connectToSM(sourceURL);
+      connectToSM(sourceURL, pset);
     }
 
     if ( _eventServers.empty() )
@@ -215,20 +241,41 @@ namespace smproxy
   }
   
   
-  void EventRetriever::connectToSM(const std::string& sourceURL)
+  void EventRetriever::connectToSM
+  (
+    const std::string& sourceURL,
+    const edm::ParameterSet& pset
+  )
   {
-    _pset.addParameter<std::string>("sourceURL", sourceURL);
+    stor::EventConsRegPtr ecrp(new stor::EventConsumerRegistrationInfo(pset));
+    ecrp->setSourceURL(sourceURL);
 
     const ConnectionID connectionId =
-      _dataRetrieverMonitorCollection.addNewConnection(_pset);
+      _dataRetrieverMonitorCollection.addNewConnection(ecrp);
     
+    {
+      boost::mutex::scoped_lock sl(_connectionIDsLock);
+      _connectionIDs.push_back(connectionId);
+    }
+
+    openConnection(connectionId, ecrp);
+  }
+  
+
+  bool EventRetriever::openConnection
+  (
+    const ConnectionID& connectionId,
+    const stor::EventConsRegPtr ecrp
+  )
+  {
     try
     {
-      EventServerPtr eventServerPtr(new stor::EventServerProxy(_pset));
+      EventServerPtr eventServerPtr(new stor::EventServerProxy(ecrp->getPSet()));
       
       _eventServers.insert(EventServers::value_type(connectionId, eventServerPtr));
       _dataRetrieverMonitorCollection.setConnectionStatus(
         connectionId, DataRetrieverMonitorCollection::CONNECTED);
+      return true;
     }
     catch (cms::Exception& e)
     {
@@ -236,10 +283,12 @@ namespace smproxy
         connectionId, DataRetrieverMonitorCollection::CONNECTION_FAILED);
       
       std::ostringstream errorMsg;
-      errorMsg << "Failed to connect to SM on " << sourceURL;
+      errorMsg << "Failed to connect to SM on " << ecrp->sourceURL();
       
       if ( ! _dataRetrieverParams._allowMissingSM )
         XCEPT_RAISE(exception::DataRetrieval, errorMsg.str());
+
+      return false;
     }
   }
   
@@ -270,7 +319,11 @@ namespace smproxy
   
   bool EventRetriever::getNextEvent(EventMsg& event)
   {
-    stor::utils::sleepUntil(_nextRequestTime);
+    if ( _nextRequestTime > stor::utils::getCurrentTime() )
+    {
+      tryToReconnect();
+      stor::utils::sleepUntil(_nextRequestTime);
+    }
 
     stor::CurlInterface::Content data;
     size_t tries = 0;
@@ -280,7 +333,8 @@ namespace smproxy
       if ( tries == _eventServers.size() )
       {
         // all event servers have been tried
-        boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
+        if ( ! tryToReconnect() )
+          boost::this_thread::sleep(_dataRetrieverParams._sleepTimeIfIdle);
         tries = 0;
         continue;
       }
@@ -326,7 +380,39 @@ namespace smproxy
     _eventServers.erase(_nextSMtoUse);
     _nextSMtoUse = _eventServers.begin();
   }
+  
+  
+  bool EventRetriever::tryToReconnect()
+  {
+    stor::utils::time_point_t now = stor::utils::getCurrentTime();
+    if ( _nextReconnectTry > now ) return false;
 
+    _nextReconnectTry = now +
+      stor::utils::seconds_to_duration(_dataRetrieverParams._connectTrySleepTime);
+
+    bool success(false);
+    boost::mutex::scoped_lock sl(_connectionIDsLock);
+
+    for (ConnectionIDs::const_iterator it = _connectionIDs.begin(),
+           itEnd = _connectionIDs.end();
+         it != itEnd; ++it)
+    {
+      DataRetrieverMonitorCollection::EventTypeStats eventTypeStats;
+      if ( _dataRetrieverMonitorCollection.
+        getEventTypeStatsForConnection(*it, eventTypeStats) )
+      {
+        if (
+          eventTypeStats.connectionStatus != DataRetrieverMonitorCollection::CONNECTED &&
+          openConnection(*it, eventTypeStats.eventConsRegPtr)
+        )
+          success = true;
+      }
+    }
+
+    if ( success ) _nextSMtoUse = _eventServers.begin();
+
+    return success;
+  }
 
 } // namespace smproxy
   
