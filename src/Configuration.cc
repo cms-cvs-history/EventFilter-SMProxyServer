@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.6 2011/02/11 16:44:52 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.7 2011/02/17 13:49:17 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -35,7 +35,7 @@ namespace smproxy
     return _dataRetrieverParamCopy;
   }
 
-  struct stor::DQMProcessingParams Configuration::getDQMProcessingParams() const
+  struct DQMProcessingParams Configuration::getDQMProcessingParams() const
   {
     boost::mutex::scoped_lock sl(_generalMutex);
     return _dqmParamCopy;

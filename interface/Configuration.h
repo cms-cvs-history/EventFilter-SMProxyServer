@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.7 2011/02/11 16:44:52 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.8 2011/02/17 13:49:07 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -41,6 +41,22 @@ namespace smproxy
 
   /**
    * Data structure to hold configuration parameters
+   * that are relevant for the processing of DQM histograms.
+   */
+  struct DQMProcessingParams
+  {
+    bool _collateDQM;
+    bool _archiveDQM;
+    std::string _filePrefixDQM;
+    unsigned int _archiveIntervalDQM;
+    stor::utils::duration_t _purgeTimeDQM;
+    stor::utils::duration_t _readyTimeDQM;
+    bool _useCompressionDQM;
+    int _compressionLevelDQM;
+  };
+
+  /**
+   * Data structure to hold configuration parameters
    * that are used for the various queues in the system.
    */
   struct QueueConfigurationParams
@@ -55,8 +71,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.7 $
-   * $Date: 2011/02/11 16:44:52 $
+   * $Revision: 1.1.2.8 $
+   * $Date: 2011/02/17 13:49:07 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -91,7 +107,7 @@ namespace smproxy
      * will be current as of the most recent global update of the local
      * cache from the infospace (see the updateAllParams() method).
      */
-    struct stor::DQMProcessingParams getDQMProcessingParams() const;
+    struct DQMProcessingParams getDQMProcessingParams() const;
 
     /**
      * Returns a copy of the event serving parameters.  These values
@@ -138,7 +154,7 @@ namespace smproxy
     void updateLocalQueueConfigurationData();
 
     struct DataRetrieverParams _dataRetrieverParamCopy;
-    struct stor::DQMProcessingParams _dqmParamCopy;
+    struct DQMProcessingParams _dqmParamCopy;
     struct stor::EventServingParams _eventServeParamCopy;
     struct QueueConfigurationParams _queueConfigParamCopy;
 
