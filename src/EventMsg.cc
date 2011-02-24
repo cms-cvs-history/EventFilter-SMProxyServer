@@ -1,4 +1,4 @@
-// $Id: EventMsg.cc,v 1.1.2.1 2011/02/04 13:47:09 mommsen Exp $
+// $Id: EventMsg.cc,v 1.1.2.2 2011/02/07 13:13:44 mommsen Exp $
 /// @file: EventMsg.cc
 
 #include "EventFilter/SMProxyServer/interface/EventMsg.h"
@@ -24,13 +24,13 @@ namespace smproxy
   }
   
   
-  void EventMsg::tagForEventConsumers(const std::vector<stor::QueueID>& queueIDs)
+  void EventMsg::tagForEventConsumers(const stor::QueueIDs& queueIDs)
   {
     _queueIDs = queueIDs;
   }
   
   
-  const std::vector<stor::QueueID>& EventMsg::getEventConsumerTags() const
+  const stor::QueueIDs& EventMsg::getEventConsumerTags() const
   {
     return _queueIDs;
   }

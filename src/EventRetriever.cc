@@ -1,4 +1,4 @@
-// $Id: EventRetriever.cc,v 1.1.2.14 2011/02/11 12:13:44 mommsen Exp $
+// $Id: EventRetriever.cc,v 1.1.2.17 2011/02/17 13:19:28 mommsen Exp $
 /// @file: EventRetriever.cc
 
 #include "EventFilter/StorageManager/interface/CurlInterface.h"
@@ -202,7 +202,7 @@ namespace smproxy
     boost::mutex::scoped_lock sl(_queueIDsLock);
     stor::utils::time_point_t now = stor::utils::getCurrentTime();
     
-    for ( QueueIDs::const_iterator it = _queueIDs.begin(), itEnd = _queueIDs.end();
+    for ( stor::QueueIDs::const_iterator it = _queueIDs.begin(), itEnd = _queueIDs.end();
           it != itEnd; ++it)
     {
       if ( ! eventQueueCollection->stale(*it, now) ) return true;

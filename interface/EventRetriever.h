@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.10 2011/02/11 12:13:44 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.11 2011/02/17 13:19:28 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -32,8 +32,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.10 $
-   * $Date: 2011/02/11 12:13:44 $
+   * $Revision: 1.1.2.11 $
+   * $Date: 2011/02/17 13:19:28 $
    */
   
   class EventRetriever
@@ -61,7 +61,7 @@ namespace smproxy {
     /**
      * Return the list of QueueIDs attached to the EventRetriever
      */
-    const std::vector<stor::QueueID>& getQueueIDs() const
+    const stor::QueueIDs& getQueueIDs() const
     { return _queueIDs; }
 
  
@@ -106,8 +106,7 @@ namespace smproxy {
 
     stor::utils::time_point_t _nextReconnectTry;
 
-    typedef std::vector<stor::QueueID> QueueIDs;
-    QueueIDs _queueIDs;
+    stor::QueueIDs _queueIDs;
     mutable boost::mutex _queueIDsLock;
   };
   

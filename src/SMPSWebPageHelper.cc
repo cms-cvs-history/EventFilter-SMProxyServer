@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.8 2011/02/15 14:06:53 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.9 2011/02/17 13:19:28 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
@@ -351,7 +351,7 @@ namespace smproxy
     maker.addDouble(tableDiv, stats.second.getValueRate(stor::MonitoredQuantity::RECENT));
 
     // Get statistics for consumers requesting this event type
-    std::vector<stor::QueueID> queueIDs;
+    stor::QueueIDs queueIDs;
     _stateMachine->getDataManager()->getQueueIDsForEventType(stats.first, queueIDs);
 
     if ( queueIDs.empty() )
@@ -372,7 +372,7 @@ namespace smproxy
     double bandwidthOverall = 0;
     double bandwidthRecent = 0;
 
-    for ( std::vector<stor::QueueID>::const_iterator it = queueIDs.begin(),
+    for ( stor::QueueIDs::const_iterator it = queueIDs.begin(),
             itEnd = queueIDs.end(); it != itEnd; ++it)
     {
       stor::MonitoredQuantity::Stats result;
