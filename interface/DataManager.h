@@ -1,4 +1,4 @@
-// $Id: DataManager.h,v 1.1.2.6 2011/01/27 14:55:54 mommsen Exp $
+// $Id: DataManager.h,v 1.1.2.7 2011/02/11 12:13:44 mommsen Exp $
 /// @file: DataManager.h 
 
 #ifndef EventFilter_SMProxyServer_DataManager_h
@@ -7,7 +7,10 @@
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
 #include "EventFilter/SMProxyServer/interface/DataRetrieverMonitorCollection.h"
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
+#include "EventFilter/StorageManager/interface/DQMEventConsumerRegistrationInfo.h"
+#include "EventFilter/StorageManager/interface/DQMEventQueueCollection.h"
 #include "EventFilter/StorageManager/interface/EventConsumerRegistrationInfo.h"
+#include "EventFilter/StorageManager/interface/EventQueueCollection.h"
 #include "EventFilter/StorageManager/interface/RegistrationInfoBase.h"
 #include "EventFilter/StorageManager/interface/RegistrationQueue.h"
 
@@ -26,8 +29,8 @@ namespace smproxy {
    * Manages the data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.6 $
-   * $Date: 2011/01/27 14:55:54 $
+   * $Revision: 1.1.2.7 $
+   * $Date: 2011/02/11 12:13:44 $
    */
   
   class DataManager
@@ -49,18 +52,32 @@ namespace smproxy {
     void stop();
 
     /**
-     * Get list of consumer queueIDs for given event type.
+     * Get list of data event consumer queueIDs for given event type.
      * Returns false if the event type is not found.
      */
-    bool getQueueIDsForEventType(stor::EventConsRegPtr, std::vector<stor::QueueID>&) const;
+    bool getQueueIDsFromDataEventRetrievers
+    (
+      stor::EventConsRegPtr,
+      stor::QueueIDs&
+    ) const;
+
+    /**
+     * Get list of DQM event consumer queueIDs for given event type.
+     * Returns false if the event type is not found.
+     */
+    bool getQueueIDsFromDQMEventRetrievers
+    (
+      stor::DQMEventConsRegPtr,
+      stor::QueueIDs&
+    ) const;
 
 
   private:
 
     void activity();
     void doIt();
-    bool addEventConsumer(stor::RegInfoBasePtr);
-    bool addDQMEventConsumer(stor::RegInfoBasePtr);
+    bool addEventConsumer(stor::RegPtr);
+    bool addDQMEventConsumer(stor::RegPtr);
     void watchDog();
     void checkForStaleConsumers();
 
@@ -71,10 +88,19 @@ namespace smproxy {
     boost::scoped_ptr<boost::thread> _thread;
     boost::scoped_ptr<boost::thread> _watchDogThread;
 
-    typedef boost::shared_ptr<EventRetriever> EventRetrieverPtr;
-    typedef std::map<stor::EventConsRegPtr, EventRetrieverPtr,
-                     stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo> > EventRetrieverMap;
-    EventRetrieverMap _eventRetrievers;
+    typedef EventRetriever<stor::EventConsumerRegistrationInfo,
+                           EventQueueCollectionPtr> DataEventRetriever;
+    typedef boost::shared_ptr<DataEventRetriever> DataEventRetrieverPtr;
+    typedef std::map<stor::EventConsRegPtr, DataEventRetrieverPtr,
+                     stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo> > DataEventRetrieverMap;
+    DataEventRetrieverMap _dataEventRetrievers;
+
+    typedef EventRetriever<stor::DQMEventConsumerRegistrationInfo,
+                           stor::DQMEventQueueCollectionPtr> DQMEventRetriever;
+    typedef boost::shared_ptr<DQMEventRetriever> DQMEventRetrieverPtr;
+    typedef std::map<stor::DQMEventConsRegPtr, DQMEventRetrieverPtr,
+                     stor::utils::ptr_comp<stor::DQMEventConsumerRegistrationInfo> > DQMEventRetrieverMap;
+    DQMEventRetrieverMap _dqmEventRetrievers;
 
   };
 

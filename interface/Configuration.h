@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.8 2011/02/17 13:49:07 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.9 2011/02/23 09:28:54 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -32,6 +32,7 @@ namespace smproxy
     uint32_t _maxConnectionRetries;
     uint32_t _connectTrySleepTime;
     uint32_t _headerRetryInterval;
+    uint32_t _retryInterval;
     stor::utils::duration_t _sleepTimeIfIdle;
 
     // not mapped to infospace params
@@ -71,8 +72,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.8 $
-   * $Date: 2011/02/17 13:49:07 $
+   * $Revision: 1.1.2.9 $
+   * $Date: 2011/02/23 09:28:54 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -165,6 +166,7 @@ namespace smproxy
     xdata::UnsignedInteger32 _maxConnectionRetries;
     xdata::UnsignedInteger32 _connectTrySleepTime; // seconds
     xdata::UnsignedInteger32 _headerRetryInterval; // seconds
+    xdata::UnsignedInteger32 _retryInterval; // seconds
     xdata::UnsignedInteger32 _sleepTimeIfIdle;  // milliseconds
 
     xdata::Boolean _collateDQM;

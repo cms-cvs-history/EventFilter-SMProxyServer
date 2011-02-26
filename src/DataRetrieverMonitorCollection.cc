@@ -1,9 +1,11 @@
-// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.4 2011/02/15 14:06:53 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.5 2011/02/17 13:19:28 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.cc
 
 #include <string>
 #include <sstream>
 #include <iomanip>
+
+#include <boost/pointer_cast.hpp>
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/DataRetrieverMonitorCollection.h"
@@ -13,30 +15,27 @@ using namespace smproxy;
 DataRetrieverMonitorCollection::DataRetrieverMonitorCollection(const stor::utils::duration_t& updateInterval) :
 MonitorCollection(updateInterval),
 _totalSize(updateInterval, boost::posix_time::seconds(60)),
-_updateInterval(updateInterval)
+_updateInterval(updateInterval),
+_eventTypeMqMap(updateInterval)
 {}
 
 
-ConnectionID DataRetrieverMonitorCollection::addNewConnection(const stor::EventConsRegPtr ecrp)
+ConnectionID DataRetrieverMonitorCollection::addNewConnection(const stor::RegPtr regPtr)
 {
   boost::mutex::scoped_lock sl(_statsMutex);
   ++_nextConnectionId;
 
-  DataRetrieverMQPtr dataRetrieverMQ( new DataRetrieverMQ(ecrp, _updateInterval) );
+  DataRetrieverMQPtr dataRetrieverMQ( new DataRetrieverMQ(regPtr, _updateInterval) );
   _retrieverMqMap.insert(RetrieverMqMap::value_type(_nextConnectionId, dataRetrieverMQ));
 
-  _eventTypeMqMap.insert(EventTypeMqMap::value_type(ecrp,
-      stor::MonitoredQuantityPtr(
-        new stor::MonitoredQuantity( _updateInterval, boost::posix_time::seconds(60) )
-      )
-    ));
+  _eventTypeMqMap.insert(regPtr);
   
-  _connectionMqMap.insert(ConnectionMqMap::value_type(ecrp->sourceURL(),
+  _connectionMqMap.insert(ConnectionMqMap::value_type(regPtr->sourceURL(),
       stor::MonitoredQuantityPtr(
         new stor::MonitoredQuantity(_updateInterval, boost::posix_time::seconds(60))
       )
     ));
-  
+
   return _nextConnectionId;
 }
 
@@ -66,7 +65,7 @@ bool DataRetrieverMonitorCollection::getEventTypeStatsForConnection
 
   if ( pos == _retrieverMqMap.end() ) return false;
 
-  stats.eventConsRegPtr = pos->second->_eventConsRegPtr;
+  stats.regPtr = pos->second->_regPtr;
   stats.connectionStatus = pos->second->_connectionStatus;
   pos->second->_size.getStats(stats.sizeStats);
 
@@ -88,12 +87,11 @@ bool DataRetrieverMonitorCollection::addRetrievedSample
   const double sizeKB = static_cast<double>(size) / 1024;
   retrieverPos->second->_size.addSample(sizeKB);
 
-  const stor::EventConsRegPtr ecrp = retrieverPos->second->_eventConsRegPtr;
+  const stor::RegPtr regPtr = retrieverPos->second->_regPtr;
 
-  EventTypeMqMap::const_iterator eventTypePos = _eventTypeMqMap.find(ecrp);
-  eventTypePos->second->addSample(sizeKB);
+  _eventTypeMqMap.addSample(regPtr, sizeKB);
 
-  const std::string sourceURL = ecrp->sourceURL();
+  const std::string sourceURL = regPtr->sourceURL();
   ConnectionMqMap::const_iterator connectionPos = _connectionMqMap.find(sourceURL);
   connectionPos->second->addSample(sizeKB);
   
@@ -118,17 +116,7 @@ void DataRetrieverMonitorCollection::getSummaryStats(SummaryStats& stats) const
       ++stats.activeSMs;
   }
   
-  stats.eventTypeStats.clear();
-  stats.eventTypeStats.reserve(_eventTypeMqMap.size());
-  
-  for (EventTypeMqMap::const_iterator it = _eventTypeMqMap.begin(),
-         itEnd = _eventTypeMqMap.end(); it != itEnd; ++it)
-  {
-    stor::MonitoredQuantity::Stats etStats;
-    it->second->getStats(etStats);
-    stats.eventTypeStats.push_back(
-      std::make_pair(it->first, etStats));
-  }
+  _eventTypeMqMap.getStats(stats.eventTypeStats);
   
   _totalSize.getStats(stats.sizeStats);
 }
@@ -159,7 +147,7 @@ void DataRetrieverMonitorCollection::getStatsByEventTypes(EventTypeStatList& ets
   {
     const DataRetrieverMQPtr mq = it->second;
     EventTypeStats stats;
-    stats.eventConsRegPtr = mq->_eventConsRegPtr;
+    stats.regPtr = mq->_regPtr;
     stats.connectionStatus = mq->_connectionStatus;
     mq->_size.getStats(stats.sizeStats);
     etsl.push_back(stats);
@@ -185,12 +173,8 @@ void DataRetrieverMonitorCollection::do_calculateStatistics()
   {
     it->second->calculateStatistics();
   }
-  
-  for (EventTypeMqMap::iterator it = _eventTypeMqMap.begin(),
-         itEnd = _eventTypeMqMap.end(); it != itEnd; ++it)
-  {
-    it->second->calculateStatistics();
-  }
+
+  _eventTypeMqMap.calculateStatistics();
 }
 
 
@@ -204,20 +188,149 @@ void DataRetrieverMonitorCollection::do_reset()
 }
 
 
+bool DataRetrieverMonitorCollection::EventTypeMqMap::
+insert(const stor::RegPtr consumer)
+{
+  return (
+    insert(boost::dynamic_pointer_cast<stor::EventConsumerRegistrationInfo>(consumer)) ||
+    insert(boost::dynamic_pointer_cast<stor::DQMEventConsumerRegistrationInfo>(consumer))
+  );
+}
+
+
+bool DataRetrieverMonitorCollection::EventTypeMqMap::
+addSample(const stor::RegPtr consumer, const double& sizeKB)
+{
+  return (
+    addSample(boost::dynamic_pointer_cast<stor::EventConsumerRegistrationInfo>(consumer), sizeKB) ||
+    addSample(boost::dynamic_pointer_cast<stor::DQMEventConsumerRegistrationInfo>(consumer), sizeKB)
+  );
+}
+
+
+void DataRetrieverMonitorCollection::EventTypeMqMap::
+getStats(SummaryStats::EventTypeStatList& eventTypeStats) const
+{
+  eventTypeStats.clear();
+  eventTypeStats.reserve(_eventMap.size()+_dqmEventMap.size());
+  
+  for (EventMap::const_iterator it = _eventMap.begin(),
+         itEnd = _eventMap.end(); it != itEnd; ++it)
+  {
+    stor::MonitoredQuantity::Stats etStats;
+    it->second->getStats(etStats);
+    eventTypeStats.push_back(
+      std::make_pair(it->first, etStats));
+  }
+  
+  for (DQMEventMap::const_iterator it = _dqmEventMap.begin(),
+         itEnd = _dqmEventMap.end(); it != itEnd; ++it)
+  {
+    stor::MonitoredQuantity::Stats etStats;
+    it->second->getStats(etStats);
+    eventTypeStats.push_back(
+      std::make_pair(it->first, etStats));
+  }
+}
+
+
+void DataRetrieverMonitorCollection::EventTypeMqMap::
+calculateStatistics()
+{
+  for (EventMap::iterator it = _eventMap.begin(),
+         itEnd = _eventMap.end(); it != itEnd; ++it)
+  {
+    it->second->calculateStatistics();
+  }
+  for (DQMEventMap::iterator it = _dqmEventMap.begin(),
+         itEnd = _dqmEventMap.end(); it != itEnd; ++it)
+  {
+    it->second->calculateStatistics();
+  }
+}
+
+
+void DataRetrieverMonitorCollection::EventTypeMqMap::
+clear()
+{
+  _eventMap.clear();
+  _dqmEventMap.clear();
+}
+
+
+bool DataRetrieverMonitorCollection::EventTypeMqMap::
+insert(const stor::EventConsRegPtr eventConsumer)
+{
+  if ( eventConsumer == 0 ) return false;
+  _eventMap.insert(EventMap::value_type(eventConsumer,
+      stor::MonitoredQuantityPtr(
+        new stor::MonitoredQuantity( _updateInterval, boost::posix_time::seconds(60) )
+      )));
+  return true;
+}
+
+
+bool DataRetrieverMonitorCollection::EventTypeMqMap::
+insert(const stor::DQMEventConsRegPtr dqmEventConsumer)
+{
+  if ( dqmEventConsumer == 0 ) return false;
+  _dqmEventMap.insert(DQMEventMap::value_type(dqmEventConsumer,
+      stor::MonitoredQuantityPtr(
+        new stor::MonitoredQuantity( _updateInterval, boost::posix_time::seconds(60) )
+      )));
+  return true;
+}
+
+
+bool DataRetrieverMonitorCollection::EventTypeMqMap::
+addSample(const stor::EventConsRegPtr eventConsumer, const double& sizeKB)
+{
+  if ( eventConsumer == 0 ) return false;
+  EventMap::const_iterator pos = _eventMap.find(eventConsumer);
+  pos->second->addSample(sizeKB);
+  return true;
+}
+
+
+bool DataRetrieverMonitorCollection::EventTypeMqMap::
+addSample(const stor::DQMEventConsRegPtr dqmEventConsumer, const double& sizeKB)
+{
+  if ( dqmEventConsumer == 0 ) return false;
+  DQMEventMap::const_iterator pos = _dqmEventMap.find(dqmEventConsumer);
+  pos->second->addSample(sizeKB);
+  return true;
+}
+
+
 bool DataRetrieverMonitorCollection::EventTypeStats::operator<(const EventTypeStats& other) const
 {
-  if ( eventConsRegPtr->sourceURL() != other.eventConsRegPtr->sourceURL() )
-    return ( eventConsRegPtr->sourceURL() < other.eventConsRegPtr->sourceURL() );
-  return ( *(eventConsRegPtr) < *(other.eventConsRegPtr) );
+  if ( regPtr->sourceURL() != other.regPtr->sourceURL() )
+    return ( regPtr->sourceURL() < other.regPtr->sourceURL() );
+
+  stor::EventConsRegPtr ecrp =
+    boost::dynamic_pointer_cast<stor::EventConsumerRegistrationInfo>(regPtr);
+  stor::EventConsRegPtr ecrpOther =
+    boost::dynamic_pointer_cast<stor::EventConsumerRegistrationInfo>(other.regPtr);
+  if ( ecrp && ecrpOther )
+    return ( *ecrp < *ecrpOther);
+
+  stor::DQMEventConsRegPtr dcrp =
+    boost::dynamic_pointer_cast<stor::DQMEventConsumerRegistrationInfo>(regPtr);
+  stor::DQMEventConsRegPtr dcrpOther =
+    boost::dynamic_pointer_cast<stor::DQMEventConsumerRegistrationInfo>(other.regPtr);
+  if ( dcrp && dcrpOther )
+    return ( *dcrp < *dcrpOther);
+
+  return false;
 }
 
 
 DataRetrieverMonitorCollection::DataRetrieverMQ::DataRetrieverMQ
 (
-  const stor::EventConsRegPtr eventConsRegPtr,
+  const stor::RegPtr regPtr,
   const stor::utils::duration_t& updateInterval
 ):
-_eventConsRegPtr(eventConsRegPtr),
+_regPtr(regPtr),
 _connectionStatus(UNKNOWN),
 _size(updateInterval, boost::posix_time::seconds(60))
 {}

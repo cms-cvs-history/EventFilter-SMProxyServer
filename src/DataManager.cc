@@ -1,10 +1,13 @@
-// $Id: DataManager.cc,v 1.1.2.8 2011/02/04 13:46:00 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.9 2011/02/11 12:13:44 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
+#include "EventFilter/SMProxyServer/src/EventRetriever.icc"
 #include "FWCore/Utilities/interface/UnixSignalHandlers.h"
+
+#include <boost/pointer_cast.hpp>
 
 
 namespace smproxy
@@ -41,25 +44,44 @@ namespace smproxy
   
   void DataManager::stop()
   {
-    // enqueue a dummy RegInfoBase to tell the thread to stop
-    _registrationQueue->enq_wait( stor::RegInfoBasePtr() );
+    // enqueue a dummy RegistrationInfoBase to tell the thread to stop
+    _registrationQueue->enq_wait( stor::RegPtr() );
     _thread->join();
 
     edm::shutdown_flag = true;
-    _eventRetrievers.clear();
+    _dataEventRetrievers.clear();
   }
   
   
-  bool DataManager::getQueueIDsForEventType
+  bool DataManager::getQueueIDsFromDataEventRetrievers
   (
-    stor::EventConsRegPtr ecrp,
-    std::vector<stor::QueueID>& queueIDs
+    stor::EventConsRegPtr eventConsumer,
+    stor::QueueIDs& queueIDs
   ) const
   {
-    EventRetrieverMap::const_iterator pos =
-      _eventRetrievers.find(ecrp);
-    if ( pos == _eventRetrievers.end() ) return false;
-
+    if ( ! eventConsumer ) return false;
+    
+    DataEventRetrieverMap::const_iterator pos =
+      _dataEventRetrievers.find(eventConsumer);
+    if ( pos == _dataEventRetrievers.end() ) return false;
+    
+    queueIDs = pos->second->getQueueIDs();
+    return true;
+  }
+  
+  
+  bool DataManager::getQueueIDsFromDQMEventRetrievers
+  (
+    stor::DQMEventConsRegPtr dqmEventConsumer,
+    stor::QueueIDs& queueIDs
+  ) const
+  {
+    if ( ! dqmEventConsumer ) return false;
+    
+    DQMEventRetrieverMap::const_iterator pos =
+      _dqmEventRetrievers.find(dqmEventConsumer);
+    if ( pos == _dqmEventRetrievers.end() ) return false;
+    
     queueIDs = pos->second->getQueueIDs();
     return true;
   }
@@ -93,14 +115,14 @@ namespace smproxy
   
   void DataManager::doIt()
   {
-    stor::RegInfoBasePtr regInfo;
+    stor::RegPtr regPtr;
     bool process(true);
 
     do
     {
-      _registrationQueue->deq_wait(regInfo);
+      _registrationQueue->deq_wait(regPtr);
 
-      if ( ! (addEventConsumer(regInfo) || addDQMEventConsumer(regInfo)) )
+      if ( ! (addEventConsumer(regPtr) || addDQMEventConsumer(regPtr)) )
       {
         // base type received, signalling the end of the run
         process = false;
@@ -109,22 +131,22 @@ namespace smproxy
   }
   
   
-  bool DataManager::addEventConsumer(stor::RegInfoBasePtr regInfo)
+  bool DataManager::addEventConsumer(stor::RegPtr regPtr)
   {
     stor::EventConsRegPtr eventConsumer =
-      boost::dynamic_pointer_cast<stor::EventConsumerRegistrationInfo>(regInfo);
+      boost::dynamic_pointer_cast<stor::EventConsumerRegistrationInfo>(regPtr);
     
     if ( ! eventConsumer ) return false;
 
-    EventRetrieverMap::iterator pos = _eventRetrievers.lower_bound(eventConsumer);
-    if ( pos == _eventRetrievers.end() || (_eventRetrievers.key_comp()(eventConsumer, pos->first)) )
+    DataEventRetrieverMap::iterator pos = _dataEventRetrievers.lower_bound(eventConsumer);
+    if ( pos == _dataEventRetrievers.end() || (_dataEventRetrievers.key_comp()(eventConsumer, pos->first)) )
     {
       // no retriever found for this event requests
-      EventRetrieverPtr eventRetriever(
-        new EventRetriever(_stateMachine, eventConsumer)
+      DataEventRetrieverPtr dataEventRetriever(
+        new DataEventRetriever(_stateMachine, eventConsumer)
       );
-      _eventRetrievers.insert(pos,
-        EventRetrieverMap::value_type(eventConsumer, eventRetriever));
+      _dataEventRetrievers.insert(pos,
+        DataEventRetrieverMap::value_type(eventConsumer, dataEventRetriever));
     }
     else
     {
@@ -135,9 +157,29 @@ namespace smproxy
   }
   
   
-  bool DataManager::addDQMEventConsumer(stor::RegInfoBasePtr regInfo)
+  bool DataManager::addDQMEventConsumer(stor::RegPtr regPtr)
   {
-    return false;
+    stor::DQMEventConsRegPtr dqmEventConsumer =
+      boost::dynamic_pointer_cast<stor::DQMEventConsumerRegistrationInfo>(regPtr);
+    
+    if ( ! dqmEventConsumer ) return false;
+
+    DQMEventRetrieverMap::iterator pos = _dqmEventRetrievers.lower_bound(dqmEventConsumer);
+    if ( pos == _dqmEventRetrievers.end() || (_dqmEventRetrievers.key_comp()(dqmEventConsumer, pos->first)) )
+    {
+      // no retriever found for this DQM event requests
+      DQMEventRetrieverPtr dqmEventRetriever(
+        new DQMEventRetriever(_stateMachine, dqmEventConsumer)
+      );
+      _dqmEventRetrievers.insert(pos,
+        DQMEventRetrieverMap::value_type(dqmEventConsumer, dqmEventRetriever));
+    }
+    else
+    {
+      pos->second->addConsumer( dqmEventConsumer );
+    }
+    
+    return true;
   }
   
   

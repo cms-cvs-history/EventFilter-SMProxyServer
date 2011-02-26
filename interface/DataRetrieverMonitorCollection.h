@@ -1,13 +1,15 @@
-// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.4 2011/02/15 14:06:53 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.5 2011/02/17 13:19:28 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.h 
 
 #ifndef EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
 #define EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
 
 #include "EventFilter/SMProxyServer/interface/ConnectionID.h"
+#include "EventFilter/StorageManager/interface/DQMEventConsumerRegistrationInfo.h"
 #include "EventFilter/StorageManager/interface/EventConsumerRegistrationInfo.h"
 #include "EventFilter/StorageManager/interface/MonitorCollection.h"
 #include "EventFilter/StorageManager/interface/MonitoredQuantity.h"
+#include "EventFilter/StorageManager/interface/RegistrationInfoBase.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include <boost/shared_ptr.hpp>
@@ -24,8 +26,8 @@ namespace smproxy {
    * A collection of MonitoredQuantities related to data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.4 $
-   * $Date: 2011/02/15 14:06:53 $
+   * $Revision: 1.1.2.5 $
+   * $Date: 2011/02/17 13:19:28 $
    */
   
   class DataRetrieverMonitorCollection : public stor::MonitorCollection
@@ -40,7 +42,7 @@ namespace smproxy {
       size_t activeSMs;
       stor::MonitoredQuantity::Stats sizeStats;         //kB
 
-      typedef std::pair<stor::EventConsRegPtr, stor::MonitoredQuantity::Stats> EventTypeStats;
+      typedef std::pair<stor::RegPtr, stor::MonitoredQuantity::Stats> EventTypeStats;
       typedef std::vector<EventTypeStats> EventTypeStatList;
       EventTypeStatList eventTypeStats;
     };
@@ -49,7 +51,7 @@ namespace smproxy {
 
     struct EventTypeStats
     {
-      stor::EventConsRegPtr eventConsRegPtr;
+      stor::RegPtr regPtr;
       ConnectionStatus connectionStatus;
       stor::MonitoredQuantity::Stats sizeStats;         //kB
 
@@ -64,7 +66,7 @@ namespace smproxy {
      * Add a new  server connection.
      * Returns an unique connection ID.
      */
-    ConnectionID addNewConnection(const stor::EventConsRegPtr);
+    ConnectionID addNewConnection(const stor::RegPtr);
 
     /**
      * Set status of given connection. Returns false if the ConnectionID is unknown.
@@ -105,13 +107,13 @@ namespace smproxy {
 
     struct DataRetrieverMQ
     {
-      stor::EventConsRegPtr _eventConsRegPtr;
+      stor::RegPtr _regPtr;
       ConnectionStatus _connectionStatus;
       stor::MonitoredQuantity _size;       //kB
 
       DataRetrieverMQ
       (
-        stor::EventConsRegPtr,
+        stor::RegPtr,
         const stor::utils::duration_t& updateInterval
       );
     };
@@ -128,11 +130,6 @@ namespace smproxy {
     typedef std::map<std::string, stor::MonitoredQuantityPtr> ConnectionMqMap;
     ConnectionMqMap _connectionMqMap;
 
-    typedef std::map<stor::EventConsRegPtr, stor::MonitoredQuantityPtr,
-                     stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo>
-                     > EventTypeMqMap;
-    EventTypeMqMap _eventTypeMqMap;
-
     mutable boost::mutex _statsMutex;
     ConnectionID _nextConnectionId;
 
@@ -140,6 +137,41 @@ namespace smproxy {
     virtual void do_reset();
     // virtual void do_appendInfoSpaceItems(InfoSpaceItems&);
     // virtual void do_updateInfoSpaceItems();
+
+    class EventTypeMqMap
+    {
+    public:
+
+      EventTypeMqMap(const stor::utils::duration_t& updateInterval)
+      : _updateInterval(updateInterval) {}
+
+      bool insert(const stor::RegPtr);
+      bool addSample(const stor::RegPtr, const double& sizeKB);
+      void getStats(SummaryStats::EventTypeStatList&) const;
+      void calculateStatistics();
+      void clear();
+
+    private:
+
+      bool insert(const stor::EventConsRegPtr);
+      bool insert(const stor::DQMEventConsRegPtr);
+      bool addSample(const stor::EventConsRegPtr, const double& sizeKB);
+      bool addSample(const stor::DQMEventConsRegPtr, const double& sizeKB);
+      
+      typedef std::map<stor::EventConsRegPtr, stor::MonitoredQuantityPtr,
+                       stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo>
+                       > EventMap;
+      EventMap _eventMap;
+      
+      typedef std::map<stor::DQMEventConsRegPtr, stor::MonitoredQuantityPtr,
+                     stor::utils::ptr_comp<stor::DQMEventConsumerRegistrationInfo>
+                     > DQMEventMap;
+      DQMEventMap _dqmEventMap;
+      
+      const stor::utils::duration_t _updateInterval;
+    };
+
+    EventTypeMqMap _eventTypeMqMap;
 
   };
 

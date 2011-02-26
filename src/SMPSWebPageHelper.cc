@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.9 2011/02/17 13:19:28 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.10 2011/02/24 10:59:26 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
@@ -6,6 +6,8 @@
 #include "EventFilter/StorageManager/interface/Utils.h"
 #include "EventFilter/StorageManager/interface/XHTMLMonitor.h"
 #include "EventFilter/StorageManager/src/ConsumerWebPageHelper.icc"
+
+#include <boost/pointer_cast.hpp>
 
 
 namespace smproxy
@@ -231,6 +233,9 @@ namespace smproxy
     rowspanAttr[ "rowspan" ] = "3";
     rowspanAttr[ "width" ] = "30%";
 
+    stor::XHTMLMaker::AttrMap noWrapAttr; 
+    noWrapAttr[ "style" ] = "white-space: nowrap;";
+
     stor::XHTMLMaker::Node* table = maker.addNode("table", parent, _tableAttr);
     stor::XHTMLMaker::Node* tableRow = maker.addNode("tr", table, _rowAttr);
     stor::XHTMLMaker::Node* tableDiv = maker.addNode("th", tableRow, colspanAttr);
@@ -264,24 +269,24 @@ namespace smproxy
     tableRow = maker.addNode("tr", table, _rowAttr);
     tableDiv = maker.addNode("th", tableRow);
     maker.addText(tableDiv, "overall");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "overall");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
     tableDiv = maker.addNode("th", tableRow);
     maker.addText(tableDiv, "overall");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "overall");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
     tableDiv = maker.addNode("th", tableRow);
     maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
     tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
+    tableDiv = maker.addNode("th", tableRow);
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
 
     if ( summaryStats.eventTypeStats.empty() )
     {
@@ -352,7 +357,18 @@ namespace smproxy
 
     // Get statistics for consumers requesting this event type
     stor::QueueIDs queueIDs;
-    _stateMachine->getDataManager()->getQueueIDsForEventType(stats.first, queueIDs);
+    bool isEventConsumer =
+      _stateMachine->getDataManager()->getQueueIDsFromDataEventRetrievers(
+        boost::dynamic_pointer_cast<stor::EventConsumerRegistrationInfo>(stats.first),
+        queueIDs
+      );
+    if ( ! isEventConsumer)
+    {
+      _stateMachine->getDataManager()->getQueueIDsFromDQMEventRetrievers(
+        boost::dynamic_pointer_cast<stor::DQMEventConsumerRegistrationInfo>(stats.first),
+        queueIDs
+      );
+    }
 
     if ( queueIDs.empty() )
     {
@@ -362,11 +378,16 @@ namespace smproxy
       maker.addText(tableDiv, "no consumers connected");
       return;
     }
+    
     const stor::EventConsumerMonitorCollection& ecmc =
       _stateMachine->getStatisticsReporter()->getEventConsumerMonitorCollection();
     const stor::DQMConsumerMonitorCollection& dcmc =
       _stateMachine->getStatisticsReporter()->getDQMConsumerMonitorCollection();
-
+    const stor::ConsumerMonitorCollection& cmc =
+      isEventConsumer ?
+      static_cast<const stor::ConsumerMonitorCollection&>(ecmc) :
+      static_cast<const stor::ConsumerMonitorCollection&>(dcmc);
+    
     double rateOverall = 0;
     double rateRecent = 0;
     double bandwidthOverall = 0;
@@ -376,7 +397,7 @@ namespace smproxy
             itEnd = queueIDs.end(); it != itEnd; ++it)
     {
       stor::MonitoredQuantity::Stats result;
-      if ( ecmc.getServed(*it, result) || dcmc.getServed(*it, result) )
+      if ( cmc.getServed(*it, result) )
       {
         rateOverall += result.getSampleRate(stor::MonitoredQuantity::FULL);
         rateRecent += result.getSampleRate(stor::MonitoredQuantity::RECENT);
@@ -479,6 +500,9 @@ namespace smproxy
     
     stor::XHTMLMaker::AttrMap subColspanAttr;
     subColspanAttr[ "colspan" ] = "2";
+
+    stor::XHTMLMaker::AttrMap noWrapAttr; 
+    noWrapAttr[ "style" ] = "white-space: nowrap;";
    
     // Header
     tableRow = maker.addNode("tr", table, _specialRowAttr);
@@ -500,16 +524,16 @@ namespace smproxy
     tableRow = maker.addNode("tr", table, _specialRowAttr);
     tableDiv = maker.addNode("th", tableRow);
     maker.addText(tableDiv, "overall");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "overall");
-    tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
     tableDiv = maker.addNode("th", tableRow);
     maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
     tableDiv = maker.addNode("th", tableRow);
-    maker.addText(tableDiv, "recent");
+    maker.addText(tableDiv, "overall");
+    tableDiv = maker.addNode("th", tableRow, noWrapAttr);
+    maker.addText(tableDiv, "last 60 s");
 
     DataRetrieverMonitorCollection::EventTypeStatList eventTypeStats;
     _stateMachine->getStatisticsReporter()->getDataRetrieverMonitorCollection()
@@ -549,10 +573,10 @@ namespace smproxy
       stor::XHTMLMaker::Node* tableRow = maker.addNode("tr", table, rowAttr);
       addRowForEventServer(maker, tableRow, *it);
       
-      const std::string currentSourceURL = it->eventConsRegPtr->sourceURL();
+      const std::string currentSourceURL = it->regPtr->sourceURL();
 
       if ( (it+1) == eventTypeStats.end() ||
-        (it+1)->eventConsRegPtr->sourceURL() != currentSourceURL )
+        (it+1)->regPtr->sourceURL() != currentSourceURL )
       {
         addSummaryRowForEventServer(maker, table,
           connectionStats.find(currentSourceURL));
@@ -571,7 +595,7 @@ namespace smproxy
     stor::XHTMLMaker::Node* tableDiv;
 
     // Hostname
-    addDOMforSMhost(maker, tableRow, stats.eventConsRegPtr->sourceURL());
+    addDOMforSMhost(maker, tableRow, stats.regPtr->sourceURL());
 
     // Status
     if ( stats.connectionStatus == DataRetrieverMonitorCollection::CONNECTED )
@@ -593,12 +617,13 @@ namespace smproxy
     tableDiv = maker.addNode("td", tableRow, _tableLabelAttr);
     stor::XHTMLMaker::Node* pre = maker.addNode("pre", tableDiv);
     std::ostringstream eventType;
-    stats.eventConsRegPtr->eventType(eventType);
+    stats.regPtr->eventType(eventType);
     maker.addText(pre, eventType.str());
 
     // Max request rate
     tableDiv = maker.addNode("td", tableRow, _tableValueAttr);
-    const stor::utils::duration_t interval = stats.eventConsRegPtr->minEventRequestInterval();
+    const stor::utils::duration_t interval =
+      stats.regPtr->minEventRequestInterval();
     if ( interval.is_not_a_date_time() )
       maker.addText(tableDiv, "unlimited");
     else

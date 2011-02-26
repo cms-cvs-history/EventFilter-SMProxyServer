@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.11 2011/02/17 13:19:28 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.12 2011/02/24 10:58:44 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -32,18 +32,21 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.11 $
-   * $Date: 2011/02/17 13:19:28 $
+   * $Revision: 1.1.2.12 $
+   * $Date: 2011/02/24 10:58:44 $
    */
-  
+
+  template<class RegInfo, class QueueCollectionPtr> 
   class EventRetriever
   {
   public:
 
+    typedef boost::shared_ptr<RegInfo> RegInfoPtr;
+
     EventRetriever
     (
       StateMachine*,
-      const stor::EventConsRegPtr
+      const RegInfoPtr
     );
 
     ~EventRetriever();
@@ -51,7 +54,7 @@ namespace smproxy {
     /**
      * Add a consumer
      */
-    void addConsumer(const stor::EventConsRegPtr);
+    void addConsumer(const RegInfoPtr);
 
     /**
      * Stop retrieving events
@@ -71,13 +74,13 @@ namespace smproxy {
     void doIt(const edm::ParameterSet&);
     bool connect(const edm::ParameterSet&);
     void connectToSM(const std::string& sourceURL, const edm::ParameterSet&);
-    bool openConnection(const ConnectionID&, const stor::EventConsRegPtr);
+    bool openConnection(const ConnectionID&, const RegInfoPtr);
     bool tryToReconnect();
     void getInitMsg();
-    bool getNextEvent(EventMsg&);
+    bool getNextEvent(stor::CurlInterface::Content&);
     bool adjustMinEventRequestInterval(const stor::utils::duration_t&);
     void updateConsumersSetting(const stor::utils::duration_t&);
-    bool anyActiveConsumers(EventQueueCollectionPtr) const;
+    bool anyActiveConsumers(QueueCollectionPtr) const;
     void disconnectFromCurrentSM();
     
     //Prevent copying of the EventRetriever
@@ -95,10 +98,11 @@ namespace smproxy {
     static size_t _retrieverCount;
     size_t _instance;
 
-    typedef boost::shared_ptr<stor::EventServerProxy> EventServerPtr;
+    typedef stor::EventServerProxy<RegInfo> EventServer;
+    typedef boost::shared_ptr<EventServer> EventServerPtr;
     typedef std::map<ConnectionID, EventServerPtr> EventServers;
     EventServers _eventServers;
-    EventServers::iterator _nextSMtoUse;
+    typename EventServers::iterator _nextSMtoUse;
 
     typedef std::vector<ConnectionID> ConnectionIDs;
     ConnectionIDs _connectionIDs;

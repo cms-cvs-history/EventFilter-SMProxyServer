@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.7 2011/02/17 13:49:17 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.8 2011/02/23 09:28:54 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -70,6 +70,7 @@ namespace smproxy
     _dataRetrieverParamCopy._maxConnectionRetries = 5;
     _dataRetrieverParamCopy._connectTrySleepTime = 10;
     _dataRetrieverParamCopy._headerRetryInterval = 5;
+    _dataRetrieverParamCopy._retryInterval = 1;
     _dataRetrieverParamCopy._sleepTimeIfIdle =
       boost::posix_time::milliseconds(100);
 
@@ -120,6 +121,7 @@ namespace smproxy
     _maxConnectionRetries = _dataRetrieverParamCopy._maxConnectionRetries;
     _connectTrySleepTime = _dataRetrieverParamCopy._connectTrySleepTime;
     _headerRetryInterval = _dataRetrieverParamCopy._headerRetryInterval;
+    _retryInterval = _dataRetrieverParamCopy._retryInterval;
     _sleepTimeIfIdle = _dataRetrieverParamCopy._sleepTimeIfIdle.total_milliseconds();
 
     // bind the local xdata variables to the infospace
@@ -128,6 +130,7 @@ namespace smproxy
     infoSpace->fireItemAvailable("maxConnectionRetries", &_maxConnectionRetries);
     infoSpace->fireItemAvailable("connectTrySleepTime", &_connectTrySleepTime);
     infoSpace->fireItemAvailable("headerRetryInterval", &_headerRetryInterval);
+    infoSpace->fireItemAvailable("retryInterval", &_retryInterval);
     infoSpace->fireItemAvailable("sleepTimeIfIdle", &_sleepTimeIfIdle);
   }
 
@@ -195,6 +198,7 @@ namespace smproxy
     _dataRetrieverParamCopy._maxConnectionRetries = _maxConnectionRetries;
     _dataRetrieverParamCopy._connectTrySleepTime = _connectTrySleepTime;
     _dataRetrieverParamCopy._headerRetryInterval = _headerRetryInterval;
+    _dataRetrieverParamCopy._retryInterval = _retryInterval;
     _dataRetrieverParamCopy._sleepTimeIfIdle =
       boost::posix_time::milliseconds(_sleepTimeIfIdle);
   }
