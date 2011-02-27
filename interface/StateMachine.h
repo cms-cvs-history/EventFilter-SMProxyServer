@@ -1,4 +1,4 @@
-// $Id: StateMachine.h,v 1.1.2.5 2011/02/10 10:20:57 mommsen Exp $
+// $Id: StateMachine.h,v 1.1.2.6 2011/02/11 12:13:44 mommsen Exp $
 /// @file: StateMachine.h 
 
 #ifndef EventFilter_SMProxyServer_StateMachine_h
@@ -76,6 +76,8 @@ namespace smproxy
     );
 
     std::string processEvent(const boost::statechart::event_base&);
+    void moveToFailedState(xcept::Exception& e)
+    { processEvent( Fail(e) ); }
 
     void setExternallyVisibleStateName(const std::string& stateName);
     void failEvent(const Fail&);

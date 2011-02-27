@@ -37,9 +37,13 @@ namespace smproxy
   _instance(++_retrieverCount),
   _dqmEventStore
   (
+    stateMachine->getApplicationDescriptor(),
+    stateMachine->getDQMEventQueueCollection(),
     stateMachine->getStatisticsReporter()->getDQMEventMonitorCollection(),
     this,
-    &smproxy::EventRetriever<RegInfo,QueueCollectionPtr>::getConnectedSMCount
+    &smproxy::EventRetriever<RegInfo,QueueCollectionPtr>::getConnectedSMCount,
+    stateMachine,
+    &smproxy::StateMachine::moveToFailedState
   )
   {
     edm::ParameterSet pset = consumer->getPSet();
@@ -181,20 +185,20 @@ namespace smproxy
     }
     catch(xcept::Exception &e)
     {
-      _stateMachine->processEvent( Fail(e) );
+      _stateMachine->moveToFailedState(e);
     }
     catch(std::exception &e)
     {
       XCEPT_DECLARE(exception::Exception,
         sentinelException, e.what());
-      _stateMachine->processEvent( Fail(sentinelException) );
+      _stateMachine->moveToFailedState(sentinelException);
     }
     catch(...)
     {
       std::string errorMsg = "Unknown exception while retrieving events";
       XCEPT_DECLARE(exception::Exception,
         sentinelException, errorMsg);
-      _stateMachine->processEvent( Fail(sentinelException) );
+      _stateMachine->moveToFailedState(sentinelException);
     }
   }
   
@@ -450,22 +454,6 @@ namespace smproxy
   template<>
   void
   EventRetriever<stor::DQMEventConsumerRegistrationInfo,stor::DQMEventQueueCollectionPtr>::
-  processCompletedTopLevelFolders()
-  {
-    stor::DQMEventQueueCollectionPtr dqmEventQueueCollection =
-      _stateMachine->getDQMEventQueueCollection();
-    
-    stor::DQMTopLevelFolder::Record topLevelFolderRecord;
-    while ( _dqmEventStore.getCompletedTopLevelFolderIfAvailable(topLevelFolderRecord) )
-    {
-      dqmEventQueueCollection->addEvent(topLevelFolderRecord);
-    }
-  }
-  
-  
-  template<>
-  void
-  EventRetriever<stor::DQMEventConsumerRegistrationInfo,stor::DQMEventQueueCollectionPtr>::
   doIt(const edm::ParameterSet& pset)
   {
     connect(pset);
@@ -487,8 +475,6 @@ namespace smproxy
           event.tagForDQMEventConsumers(_queueIDs);
         }
         _dqmEventStore.addDQMEvent(event);
-
-        processCompletedTopLevelFolders();
       }
       else
       {
@@ -505,8 +491,6 @@ namespace smproxy
   stop()
   {
     _dqmEventStore.purge();
-    processCompletedTopLevelFolders();
-    
     do_stop();
   }
 
@@ -566,7 +550,8 @@ namespace stor {
   
   template<>  
   DQMEventMsgView
-  DQMEventStore<smproxy::DQMEventMsg, smproxy::DataManager::DQMEventRetriever>::
+  DQMEventStore<smproxy::DQMEventMsg, smproxy::DataManager::DQMEventRetriever,
+                smproxy::StateMachine>::
   getDQMEventView(smproxy::DQMEventMsg const& dqmEvent)
   {
     return DQMEventMsgView(dqmEvent.dataLocation());

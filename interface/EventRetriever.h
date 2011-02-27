@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.13 2011/02/26 09:17:26 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.14 2011/02/27 13:58:12 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -34,8 +34,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.13 $
-   * $Date: 2011/02/26 09:17:26 $
+   * $Revision: 1.1.2.14 $
+   * $Date: 2011/02/27 13:58:12 $
    */
 
   template<class RegInfo, class QueueCollectionPtr> 
@@ -124,7 +124,8 @@ namespace smproxy {
     mutable boost::mutex _queueIDsLock;
 
     stor::DQMEventStore<DQMEventMsg,
-                        EventRetriever<RegInfo,QueueCollectionPtr>
+                        EventRetriever<RegInfo,QueueCollectionPtr>,
+                        StateMachine
                         > _dqmEventStore;
   
   };

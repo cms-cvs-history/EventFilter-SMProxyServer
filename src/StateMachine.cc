@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.8 2011/01/27 14:55:54 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.9 2011/02/17 13:49:31 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -123,7 +123,7 @@ namespace smproxy
     {
       XCEPT_DECLARE_NESTED(exception::Configuration,
         sentinelException, errorMsg, e);
-      processEvent( Fail(sentinelException) );
+      moveToFailedState(sentinelException);
     }
     catch( std::exception &e )
     {
@@ -132,7 +132,7 @@ namespace smproxy
       
       XCEPT_DECLARE(exception::Configuration,
         sentinelException, errorMsg);
-      processEvent( Fail(sentinelException) );
+      moveToFailedState(sentinelException);
     }
     catch(...)
     {
@@ -140,7 +140,7 @@ namespace smproxy
       
       XCEPT_DECLARE(exception::Configuration,
         sentinelException, errorMsg);
-      processEvent( Fail(sentinelException) );
+      moveToFailedState(sentinelException);
     }
   }
   

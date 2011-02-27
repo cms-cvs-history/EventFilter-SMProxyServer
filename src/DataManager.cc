@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.9 2011/02/11 12:13:44 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.10 2011/02/26 09:17:26 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -95,20 +95,20 @@ namespace smproxy
     }
     catch(xcept::Exception &e)
     {
-      _stateMachine->processEvent( Fail(e) );
+      _stateMachine->moveToFailedState(e);
     }
     catch(std::exception &e)
     {
       XCEPT_DECLARE(exception::Exception,
         sentinelException, e.what());
-      _stateMachine->processEvent( Fail(sentinelException) );
+      _stateMachine->moveToFailedState(sentinelException);
     }
     catch(...)
     {
       std::string errorMsg = "Unknown exception in watch dog";
       XCEPT_DECLARE(exception::Exception,
         sentinelException, errorMsg);
-      _stateMachine->processEvent( Fail(sentinelException) );
+      _stateMachine->moveToFailedState(sentinelException);
     }
   }
   
@@ -195,20 +195,20 @@ namespace smproxy
     }
     catch(xcept::Exception &e)
     {
-      _stateMachine->processEvent( Fail(e) );
+      _stateMachine->moveToFailedState(e);
     }
     catch(std::exception &e)
     {
       XCEPT_DECLARE(exception::Exception,
         sentinelException, e.what());
-      _stateMachine->processEvent( Fail(sentinelException) );
+      _stateMachine->moveToFailedState(sentinelException);
     }
     catch(...)
     {
       std::string errorMsg = "Unknown exception in watch dog";
       XCEPT_DECLARE(exception::Exception,
         sentinelException, errorMsg);
-      _stateMachine->processEvent( Fail(sentinelException) );
+      _stateMachine->moveToFailedState(sentinelException);
     }
   }
   

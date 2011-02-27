@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.44.2.4 2011/01/26 16:06:54 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.2.5 2011/02/08 16:51:51 mommsen Exp $
 /// @file: SMProxyServer.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -125,20 +125,20 @@ void SMProxyServer::startWorkerThreads()
   }
   catch(xcept::Exception &e)
   {
-    _stateMachine->processEvent( Fail(e) );
+    _stateMachine->moveToFailedState(e);
   }
   catch(std::exception &e)
   {
     XCEPT_DECLARE(exception::Exception,
       sentinelException, e.what());
-    _stateMachine->processEvent( Fail(sentinelException) );
+    _stateMachine->moveToFailedState(sentinelException);
   }
   catch(...)
   {
     std::string errorMsg = "Unknown exception when starting the workloops";
     XCEPT_DECLARE(exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->processEvent( Fail(sentinelException) );
+    _stateMachine->moveToFailedState(sentinelException);
   }
 }
 
@@ -307,24 +307,24 @@ xoap::MessageReference SMProxyServer::handleFSMSoapMessage( xoap::MessageReferen
     errorMsg += e.explainSelf();
     XCEPT_DECLARE(xoap::exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->processEvent( Fail(sentinelException) );
+    _stateMachine->moveToFailedState(sentinelException);
   }
   catch (xcept::Exception &e) {
     XCEPT_DECLARE_NESTED(xoap::exception::Exception,
       sentinelException, errorMsg, e);
-    _stateMachine->processEvent( Fail(sentinelException) );
+    _stateMachine->moveToFailedState(sentinelException);
   }
   catch (std::exception& e) {
     errorMsg += e.what();
     XCEPT_DECLARE(xoap::exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->processEvent( Fail(sentinelException) );
+    _stateMachine->moveToFailedState(sentinelException);
   }
   catch (...) {
     errorMsg += "Unknown exception";
     XCEPT_DECLARE(xoap::exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->processEvent( Fail(sentinelException) );
+    _stateMachine->moveToFailedState(sentinelException);
   }
 
   return returnMsg;
