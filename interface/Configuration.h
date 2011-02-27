@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.9 2011/02/23 09:28:54 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.10 2011/02/26 09:17:26 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -42,18 +42,13 @@ namespace smproxy
 
   /**
    * Data structure to hold configuration parameters
-   * that are relevant for the processing of DQM histograms.
+   * that are relevant for archiving DQM histograms
    */
-  struct DQMProcessingParams
+  struct DQMArchivingParams
   {
-    bool _collateDQM;
     bool _archiveDQM;
     std::string _filePrefixDQM;
     unsigned int _archiveIntervalDQM;
-    stor::utils::duration_t _purgeTimeDQM;
-    stor::utils::duration_t _readyTimeDQM;
-    bool _useCompressionDQM;
-    int _compressionLevelDQM;
   };
 
   /**
@@ -72,8 +67,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.9 $
-   * $Date: 2011/02/23 09:28:54 $
+   * $Revision: 1.1.2.10 $
+   * $Date: 2011/02/26 09:17:26 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -108,7 +103,14 @@ namespace smproxy
      * will be current as of the most recent global update of the local
      * cache from the infospace (see the updateAllParams() method).
      */
-    struct DQMProcessingParams getDQMProcessingParams() const;
+    struct stor::DQMProcessingParams getDQMProcessingParams() const;
+
+    /**
+     * Returns a copy of the DQM archiving parameters.  These values
+     * will be current as of the most recent global update of the local
+     * cache from the infospace (see the updateAllParams() method).
+     */
+    struct DQMArchivingParams getDQMArchivingParams() const;
 
     /**
      * Returns a copy of the event serving parameters.  These values
@@ -140,23 +142,27 @@ namespace smproxy
   private:
 
     void setDataRetrieverDefaults(unsigned long instanceNumber);
-    void setDQMProcessingDefaults();
     void setEventServingDefaults();
+    void setDQMProcessingDefaults();
+    void setDQMArchivingDefaults();
     void setQueueConfigurationDefaults();
 
     void setupDataRetrieverInfoSpaceParams(xdata::InfoSpace*);
-    void setupDQMProcessingInfoSpaceParams(xdata::InfoSpace*);
     void setupEventServingInfoSpaceParams(xdata::InfoSpace*);
+    void setupDQMProcessingInfoSpaceParams(xdata::InfoSpace*);
+    void setupDQMArchivingInfoSpaceParams(xdata::InfoSpace*);
     void setupQueueConfigurationInfoSpaceParams(xdata::InfoSpace*);
 
     void updateLocalDataRetrieverData();
-    void updateLocalDQMProcessingData();
     void updateLocalEventServingData();
+    void updateLocalDQMProcessingData();
+    void updateLocalDQMArchivingData();
     void updateLocalQueueConfigurationData();
 
     struct DataRetrieverParams _dataRetrieverParamCopy;
-    struct DQMProcessingParams _dqmParamCopy;
     struct stor::EventServingParams _eventServeParamCopy;
+    struct stor::DQMProcessingParams _dqmProcessingParamCopy;
+    struct DQMArchivingParams _dqmArchivingParamCopy;
     struct QueueConfigurationParams _queueConfigParamCopy;
 
     mutable boost::mutex _generalMutex;
@@ -170,13 +176,13 @@ namespace smproxy
     xdata::UnsignedInteger32 _sleepTimeIfIdle;  // milliseconds
 
     xdata::Boolean _collateDQM;
-    xdata::Boolean _archiveDQM;
-    xdata::Integer _archiveIntervalDQM;  // lumi sections
-    xdata::String  _filePrefixDQM;
-    xdata::Integer _purgeTimeDQM;  // seconds
     xdata::Integer _readyTimeDQM;  // seconds
     xdata::Boolean _useCompressionDQM;
     xdata::Integer _compressionLevelDQM;
+
+    xdata::Boolean _archiveDQM;
+    xdata::String  _filePrefixDQM;
+    xdata::Integer _archiveIntervalDQM;  // lumi sections
     
     xdata::Integer _activeConsumerTimeout;  // seconds
     xdata::Integer _consumerQueueSize;

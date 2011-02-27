@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.8 2011/02/23 09:28:54 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.9 2011/02/26 09:17:26 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -19,13 +19,15 @@ namespace smproxy
     // default values are used to initialize infospace values,
     // so they should be set first
     setDataRetrieverDefaults(instanceNumber);
-    setDQMProcessingDefaults();
     setEventServingDefaults();
+    setDQMProcessingDefaults();
+    setDQMArchivingDefaults();
     setQueueConfigurationDefaults();
 
     setupDataRetrieverInfoSpaceParams(infoSpace);
-    setupDQMProcessingInfoSpaceParams(infoSpace);
     setupEventServingInfoSpaceParams(infoSpace);
+    setupDQMProcessingInfoSpaceParams(infoSpace);
+    setupDQMArchivingInfoSpaceParams(infoSpace);
     setupQueueConfigurationInfoSpaceParams(infoSpace);
   }
 
@@ -35,16 +37,22 @@ namespace smproxy
     return _dataRetrieverParamCopy;
   }
 
-  struct DQMProcessingParams Configuration::getDQMProcessingParams() const
-  {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    return _dqmParamCopy;
-  }
-
   struct stor::EventServingParams Configuration::getEventServingParams() const
   {
     boost::mutex::scoped_lock sl(_generalMutex);
     return _eventServeParamCopy;
+  }
+
+  struct stor::DQMProcessingParams Configuration::getDQMProcessingParams() const
+  {
+    boost::mutex::scoped_lock sl(_generalMutex);
+    return _dqmProcessingParamCopy;
+  }
+
+  struct DQMArchivingParams Configuration::getDQMArchivingParams() const
+  {
+    boost::mutex::scoped_lock sl(_generalMutex);
+    return _dqmArchivingParamCopy;
   }
 
   struct QueueConfigurationParams Configuration::getQueueConfigurationParams() const
@@ -57,8 +65,9 @@ namespace smproxy
   {
     boost::mutex::scoped_lock sl(_generalMutex);
     updateLocalDataRetrieverData();
-    updateLocalDQMProcessingData();
     updateLocalEventServingData();
+    updateLocalDQMProcessingData();
+    updateLocalDQMArchivingData();
     updateLocalQueueConfigurationData();
   }
 
@@ -83,18 +92,6 @@ namespace smproxy
     }
     _dataRetrieverParamCopy._hostName = tmpString;
   }
-
-  void Configuration::setDQMProcessingDefaults()
-  {
-    _dqmParamCopy._collateDQM = false;
-    _dqmParamCopy._archiveDQM = false;
-    _dqmParamCopy._filePrefixDQM = "/tmp/DQM";
-    _dqmParamCopy._archiveIntervalDQM = 0;
-    _dqmParamCopy._purgeTimeDQM = boost::posix_time::seconds(300);
-    _dqmParamCopy._readyTimeDQM = boost::posix_time::seconds(120);
-    _dqmParamCopy._useCompressionDQM = true;
-    _dqmParamCopy._compressionLevelDQM = 1;
-  }
   
   void Configuration::setEventServingDefaults()
   {
@@ -104,6 +101,21 @@ namespace smproxy
     _eventServeParamCopy._DQMactiveConsumerTimeout = boost::posix_time::seconds(60);
     _eventServeParamCopy._DQMconsumerQueueSize = 15;
     _eventServeParamCopy._DQMconsumerQueuePolicy = "DiscardOld";
+  }
+
+  void Configuration::setDQMProcessingDefaults()
+  {
+    _dqmProcessingParamCopy._collateDQM = false;
+    _dqmProcessingParamCopy._readyTimeDQM = boost::posix_time::seconds(120);
+    _dqmProcessingParamCopy._useCompressionDQM = true;
+    _dqmProcessingParamCopy._compressionLevelDQM = 1;
+  }
+
+  void Configuration::setDQMArchivingDefaults()
+  {
+    _dqmArchivingParamCopy._archiveDQM = false;
+    _dqmArchivingParamCopy._filePrefixDQM = "/tmp/DQM";
+    _dqmArchivingParamCopy._archiveIntervalDQM = 0;
   }
 
   void Configuration::setQueueConfigurationDefaults()
@@ -133,30 +145,6 @@ namespace smproxy
     infoSpace->fireItemAvailable("retryInterval", &_retryInterval);
     infoSpace->fireItemAvailable("sleepTimeIfIdle", &_sleepTimeIfIdle);
   }
-
-  void Configuration::
-  setupDQMProcessingInfoSpaceParams(xdata::InfoSpace* infoSpace)
-  {
-    // copy the initial defaults to the xdata variables
-    _collateDQM = _dqmParamCopy._collateDQM;
-    _archiveDQM = _dqmParamCopy._archiveDQM;
-    _archiveIntervalDQM = _dqmParamCopy._archiveIntervalDQM;
-    _filePrefixDQM = _dqmParamCopy._filePrefixDQM;
-    _purgeTimeDQM = _dqmParamCopy._purgeTimeDQM.total_seconds();
-    _readyTimeDQM = _dqmParamCopy._readyTimeDQM.total_seconds();
-    _useCompressionDQM = _dqmParamCopy._useCompressionDQM;
-    _compressionLevelDQM = _dqmParamCopy._compressionLevelDQM;
-
-    // bind the local xdata variables to the infospace
-    infoSpace->fireItemAvailable("collateDQM", &_collateDQM);
-    infoSpace->fireItemAvailable("archiveDQM", &_archiveDQM);
-    infoSpace->fireItemAvailable("archiveIntervalDQM", &_archiveIntervalDQM);
-    infoSpace->fireItemAvailable("purgeTimeDQM", &_purgeTimeDQM);
-    infoSpace->fireItemAvailable("readyTimeDQM", &_readyTimeDQM);
-    infoSpace->fireItemAvailable("filePrefixDQM", &_filePrefixDQM);
-    infoSpace->fireItemAvailable("useCompressionDQM", &_useCompressionDQM);
-    infoSpace->fireItemAvailable("compressionLevelDQM", &_compressionLevelDQM);
-  }
   
   void Configuration::
   setupEventServingInfoSpaceParams(xdata::InfoSpace* infoSpace)
@@ -176,6 +164,36 @@ namespace smproxy
     infoSpace->fireItemAvailable("DQMactiveConsumerTimeout", &_DQMactiveConsumerTimeout);
     infoSpace->fireItemAvailable("DQMconsumerQueueSize", &_DQMconsumerQueueSize);
     infoSpace->fireItemAvailable("DQMconsumerQueuePolicy",&_DQMconsumerQueuePolicy);
+  }
+
+  void Configuration::
+  setupDQMProcessingInfoSpaceParams(xdata::InfoSpace* infoSpace)
+  {
+    // copy the initial defaults to the xdata variables
+    _collateDQM = _dqmProcessingParamCopy._collateDQM;
+    _readyTimeDQM = _dqmProcessingParamCopy._readyTimeDQM.total_seconds();
+    _useCompressionDQM = _dqmProcessingParamCopy._useCompressionDQM;
+    _compressionLevelDQM = _dqmProcessingParamCopy._compressionLevelDQM;
+
+    // bind the local xdata variables to the infospace
+    infoSpace->fireItemAvailable("collateDQM", &_collateDQM);
+    infoSpace->fireItemAvailable("readyTimeDQM", &_readyTimeDQM);
+    infoSpace->fireItemAvailable("useCompressionDQM", &_useCompressionDQM);
+    infoSpace->fireItemAvailable("compressionLevelDQM", &_compressionLevelDQM);
+  }
+
+  void Configuration::
+  setupDQMArchivingInfoSpaceParams(xdata::InfoSpace* infoSpace)
+  {
+    // copy the initial defaults to the xdata variables
+    _archiveDQM = _dqmArchivingParamCopy._archiveDQM;
+    _archiveIntervalDQM = _dqmArchivingParamCopy._archiveIntervalDQM;
+    _filePrefixDQM = _dqmArchivingParamCopy._filePrefixDQM;
+
+    // bind the local xdata variables to the infospace
+    infoSpace->fireItemAvailable("archiveDQM", &_archiveDQM);
+    infoSpace->fireItemAvailable("archiveIntervalDQM", &_archiveIntervalDQM);
+    infoSpace->fireItemAvailable("filePrefixDQM", &_filePrefixDQM);
   }
   
   void Configuration::
@@ -227,22 +245,18 @@ namespace smproxy
 
   void Configuration::updateLocalDQMProcessingData()
   {
-    _dqmParamCopy._collateDQM = _collateDQM;
-    _dqmParamCopy._archiveDQM = _archiveDQM;
-    _dqmParamCopy._archiveIntervalDQM = _archiveIntervalDQM;
-    _dqmParamCopy._filePrefixDQM = _filePrefixDQM;
-    _dqmParamCopy._purgeTimeDQM =
-      boost::posix_time::seconds( static_cast<int>(_purgeTimeDQM) );
-    _dqmParamCopy._readyTimeDQM =
+    _dqmProcessingParamCopy._collateDQM = _collateDQM;
+    _dqmProcessingParamCopy._readyTimeDQM =
       boost::posix_time::seconds( static_cast<int>(_readyTimeDQM) );
-    _dqmParamCopy._useCompressionDQM = _useCompressionDQM;
-    _dqmParamCopy._compressionLevelDQM = _compressionLevelDQM;
+    _dqmProcessingParamCopy._useCompressionDQM = _useCompressionDQM;
+    _dqmProcessingParamCopy._compressionLevelDQM = _compressionLevelDQM;
+  }
 
-    // make sure that purge time is larger than ready time
-    if ( _dqmParamCopy._purgeTimeDQM < _dqmParamCopy._readyTimeDQM )
-    {
-      _dqmParamCopy._purgeTimeDQM = _dqmParamCopy._readyTimeDQM + boost::posix_time::seconds(10);
-    }
+  void Configuration::updateLocalDQMArchivingData()
+  {
+    _dqmArchivingParamCopy._archiveDQM = _archiveDQM;
+    _dqmArchivingParamCopy._archiveIntervalDQM = _archiveIntervalDQM;
+    _dqmArchivingParamCopy._filePrefixDQM = _filePrefixDQM;
   }
 
   void Configuration::updateLocalQueueConfigurationData()
@@ -256,7 +270,6 @@ namespace smproxy
   {
     boost::mutex::scoped_lock sl(_generalMutex);
   }
-
 
 } // namespace smproxy
 
