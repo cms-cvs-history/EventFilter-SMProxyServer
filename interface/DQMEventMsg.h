@@ -1,11 +1,12 @@
-// $Id: EventMsg.h,v 1.1.2.3 2011/02/24 10:58:44 mommsen Exp $
-/// @file: EventMsg.h 
+// $Id: DQMEventMsg.h,v 1.1.2.3 2011/02/24 10:58:44 mommsen Exp $
+/// @file: DQMEventMsg.h 
 
-#ifndef EventFilter_SMProxyServer_EventMsg_h
-#define EventFilter_SMProxyServer_EventMsg_h
+#ifndef EventFilter_SMProxyServer_DQMEventMsg_h
+#define EventFilter_SMProxyServer_DQMEventMsg_h
 
+#include "EventFilter/StorageManager/interface/DQMKey.h"
 #include "EventFilter/StorageManager/interface/QueueID.h"
-#include "IOPool/Streamer/interface/EventMessage.h"
+#include "IOPool/Streamer/interface/DQMEventMessage.h"
 
 #include <boost/shared_ptr.hpp>
 #include <vector>
@@ -13,7 +14,7 @@
 namespace smproxy {
 
   /**
-   * A class for storing an EventMsgView and providing the basic 
+   * A class for storing an DQMEventMsgView and providing the basic 
    * APIs required for SMPS
    *
    * $Author: mommsen $
@@ -21,22 +22,27 @@ namespace smproxy {
    * $Date: 2011/02/24 10:58:44 $
    */
 
-  class EventMsg
+  class DQMEventMsg
   {
   public:
     
-    EventMsg();
-    EventMsg(const EventMsgView&);
+    DQMEventMsg();
+    DQMEventMsg(const DQMEventMsgView&);
 
     /**
-      Tag the event for the passed list of queueIDs
+      Tag the DQM event for the passed list of queueIDs
      */
-    void tagForEventConsumers(const stor::QueueIDs&);
+    void tagForDQMEventConsumers(const stor::QueueIDs&);
 
     /**
-      Return the QueueIDs for which the event is tagged
+      Return the QueueIDs for which the DQM event is tagged
      */
-    const stor::QueueIDs& getEventConsumerTags() const;
+    const stor::QueueIDs& getDQMEventConsumerTags() const;
+
+    /**
+      Return the DQM key corresponding to this message
+    */
+    const stor::DQMKey& dqmKey() const;
 
     /**
       Returns the total memory occupied by the event message
@@ -65,16 +71,17 @@ namespace smproxy {
 
 
   private:
-    typedef std::vector<unsigned char> EventMsgBuffer;
-    boost::shared_ptr<EventMsgBuffer> _buf;
+    typedef std::vector<unsigned char> DQMEventMsgBuffer;
+    boost::shared_ptr<DQMEventMsgBuffer> _buf;
     bool _faulty;
 
     stor::QueueIDs _queueIDs;
+    stor::DQMKey _dqmKey;
   };
   
 } // namespace smproxy
 
-#endif // EventFilter_SMProxyServer_EventMsg_h 
+#endif // EventFilter_SMProxyServer_DQMEventMsg_h 
 
 
 

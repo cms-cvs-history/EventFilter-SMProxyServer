@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.12 2011/02/24 10:58:44 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.13 2011/02/26 09:17:26 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -7,7 +7,9 @@
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
 #include "EventFilter/SMProxyServer/interface/ConnectionID.h"
 #include "EventFilter/SMProxyServer/interface/DataRetrieverMonitorCollection.h"
+#include "EventFilter/SMProxyServer/interface/DQMEventMsg.h"
 #include "EventFilter/SMProxyServer/interface/EventQueueCollection.h"
+#include "EventFilter/StorageManager/interface/DQMEventStore.h"
 #include "EventFilter/StorageManager/interface/EventServerProxy.h"
 #include "EventFilter/StorageManager/interface/EventConsumerRegistrationInfo.h"
 #include "EventFilter/StorageManager/interface/QueueID.h"
@@ -32,8 +34,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.12 $
-   * $Date: 2011/02/24 10:58:44 $
+   * $Revision: 1.1.2.13 $
+   * $Date: 2011/02/26 09:17:26 $
    */
 
   template<class RegInfo, class QueueCollectionPtr> 
@@ -67,11 +69,18 @@ namespace smproxy {
     const stor::QueueIDs& getQueueIDs() const
     { return _queueIDs; }
 
+    /**
+     * Return the number of active connections to SMs
+     */
+    size_t getConnectedSMCount() const
+    { return _eventServers.size(); }
+
  
   private:
 
     void activity(const edm::ParameterSet&);
     void doIt(const edm::ParameterSet&);
+    void do_stop();
     bool connect(const edm::ParameterSet&);
     void connectToSM(const std::string& sourceURL, const edm::ParameterSet&);
     bool openConnection(const ConnectionID&, const RegInfoPtr);
@@ -82,6 +91,7 @@ namespace smproxy {
     void updateConsumersSetting(const stor::utils::duration_t&);
     bool anyActiveConsumers(QueueCollectionPtr) const;
     void disconnectFromCurrentSM();
+    void processCompletedTopLevelFolders();
     
     //Prevent copying of the EventRetriever
     EventRetriever(EventRetriever const&);
@@ -112,6 +122,11 @@ namespace smproxy {
 
     stor::QueueIDs _queueIDs;
     mutable boost::mutex _queueIDsLock;
+
+    stor::DQMEventStore<DQMEventMsg,
+                        EventRetriever<RegInfo,QueueCollectionPtr>
+                        > _dqmEventStore;
+  
   };
   
 } // namespace smproxy

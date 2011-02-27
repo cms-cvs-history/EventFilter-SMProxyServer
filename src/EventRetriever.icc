@@ -1,10 +1,12 @@
-// $Id: EventRetriever.icc,v 1.1.2.18 2011/02/24 10:59:26 mommsen Exp $
+// $Id: EventRetriever.icc,v 1.1.2.1 2011/02/26 09:17:26 mommsen Exp $
 /// @file: EventRetriever.icc
 
+#include "EventFilter/SMProxyServer/interface/EventMsg.h"
 #include "EventFilter/SMProxyServer/interface/EventRetriever.h"
 #include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "EventFilter/StorageManager/interface/CurlInterface.h"
+#include "EventFilter/StorageManager/src/DQMEventStore.icc"
 #include "EventFilter/StorageManager/src/EventServerProxy.icc"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Exception.h"
@@ -32,7 +34,13 @@ namespace smproxy
   _dataRetrieverParams(stateMachine->getConfiguration()->getDataRetrieverParams()),
   _dataRetrieverMonitorCollection(stateMachine->getStatisticsReporter()->getDataRetrieverMonitorCollection()),
   _minEventRequestInterval(consumer->minEventRequestInterval()),
-  _instance(++_retrieverCount)
+  _instance(++_retrieverCount),
+  _dqmEventStore
+  (
+    stateMachine->getStatisticsReporter()->getDQMEventMonitorCollection(),
+    this,
+    &smproxy::EventRetriever<RegInfo,QueueCollectionPtr>::getConnectedSMCount
+  )
   {
     edm::ParameterSet pset = consumer->getPSet();
     pset.addUntrackedParameter<std::string>("consumerName",
@@ -57,6 +65,8 @@ namespace smproxy
     _nextReconnectTry = _nextRequestTime +
       stor::utils::seconds_to_duration(_dataRetrieverParams._connectTrySleepTime);
     _queueIDs.push_back(consumer->queueId());
+
+    _dqmEventStore.setParameters(stateMachine->getConfiguration()->getDQMProcessingParams());
 
     _thread.reset(
       new boost::thread( boost::bind( &EventRetriever::activity, this, pset) )
@@ -143,7 +153,7 @@ namespace smproxy
   template<class RegInfo, class QueueCollectionPtr>
   void
   EventRetriever<RegInfo,QueueCollectionPtr>::
-  stop()
+  do_stop()
   {
     _thread->interrupt();
     _thread->join();
@@ -436,7 +446,23 @@ namespace smproxy
   ///////////////////////////////////////////
   // Specializations for DQMEventRetriever //
   ///////////////////////////////////////////
-
+  
+  template<>
+  void
+  EventRetriever<stor::DQMEventConsumerRegistrationInfo,stor::DQMEventQueueCollectionPtr>::
+  processCompletedTopLevelFolders()
+  {
+    stor::DQMEventQueueCollectionPtr dqmEventQueueCollection =
+      _stateMachine->getDQMEventQueueCollection();
+    
+    stor::DQMTopLevelFolder::Record topLevelFolderRecord;
+    while ( _dqmEventStore.getCompletedTopLevelFolderIfAvailable(topLevelFolderRecord) )
+    {
+      dqmEventQueueCollection->addEvent(topLevelFolderRecord);
+    }
+  }
+  
+  
   template<>
   void
   EventRetriever<stor::DQMEventConsumerRegistrationInfo,stor::DQMEventQueueCollectionPtr>::
@@ -454,15 +480,15 @@ namespace smproxy
         stor::CurlInterface::Content data;
         if ( ! getNextEvent(data) ) break;
 
-//         const EventMsgView view(&data[0]);
-//         EventMsg event(view);
-        
-//         {
-//           boost::mutex::scoped_lock sl(_queueIDsLock);
-//           event.tagForEventConsumers(_queueIDs);
-//         }
-        
-//         eventQueueCollection->addEvent(event);
+        const DQMEventMsgView view(&data[0]);
+        DQMEventMsg event(view);
+        {
+          boost::mutex::scoped_lock sl(_queueIDsLock);
+          event.tagForDQMEventConsumers(_queueIDs);
+        }
+        _dqmEventStore.addDQMEvent(event);
+
+        processCompletedTopLevelFolders();
       }
       else
       {
@@ -472,6 +498,18 @@ namespace smproxy
     }
   }
   
+  
+  template<>
+  void
+  EventRetriever<stor::DQMEventConsumerRegistrationInfo,stor::DQMEventQueueCollectionPtr>::
+  stop()
+  {
+    _dqmEventStore.purge();
+    processCompletedTopLevelFolders();
+    
+    do_stop();
+  }
+
   
   template<>
   void
@@ -509,9 +547,35 @@ namespace smproxy
       }
     }
   }
+  
+  template<>
+  void
+  EventRetriever<stor::EventConsumerRegistrationInfo,EventQueueCollectionPtr>::
+  stop()
+  {
+    do_stop();
+  }
 
 } // namespace smproxy
+
+namespace stor {
+
+  ///////////////////////////////////////
+  // Specializations for DQMEventStore //
+  ///////////////////////////////////////
   
+  template<>  
+  DQMEventMsgView
+  DQMEventStore<smproxy::DQMEventMsg, smproxy::DataManager::DQMEventRetriever>::
+  getDQMEventView(smproxy::DQMEventMsg const& dqmEvent)
+  {
+    return DQMEventMsgView(dqmEvent.dataLocation());
+  }
+
+} // namespace stor
+
+
+
 /// emacs configuration
 /// Local Variables: -
 /// mode: c++ -
