@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.10 2011/02/24 10:59:26 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.11 2011/02/26 09:17:26 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
@@ -103,6 +103,11 @@ namespace smproxy
       _stateMachine->getReasonForFailed()
     );
     
+    const stor::DQMEventMonitorCollection& demc =
+      _stateMachine->getStatisticsReporter()->getDQMEventMonitorCollection();
+    addDOMforProcessedDQMEvents(maker, body, demc);
+    addDOMforDQMEventStatistics(maker, body, demc);
+
     addDOMforHyperLinks(maker, body);
     
     // Dump the webpage to the output stream
