@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.10 2011/02/27 13:58:51 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.11 2011/02/28 14:34:25 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -33,37 +33,37 @@ namespace smproxy
 
   struct DataRetrieverParams Configuration::getDataRetrieverParams() const
   {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    return _dataRetrieverParamCopy;
+    boost::mutex::scoped_lock sl(generalMutex_);
+    return dataRetrieverParamCopy_;
   }
 
   struct stor::EventServingParams Configuration::getEventServingParams() const
   {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    return _eventServeParamCopy;
+    boost::mutex::scoped_lock sl(generalMutex_);
+    return eventServeParamCopy_;
   }
 
   struct stor::DQMProcessingParams Configuration::getDQMProcessingParams() const
   {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    return _dqmProcessingParamCopy;
+    boost::mutex::scoped_lock sl(generalMutex_);
+    return dqmProcessingParamCopy_;
   }
 
   struct DQMArchivingParams Configuration::getDQMArchivingParams() const
   {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    return _dqmArchivingParamCopy;
+    boost::mutex::scoped_lock sl(generalMutex_);
+    return dqmArchivingParamCopy_;
   }
 
   struct QueueConfigurationParams Configuration::getQueueConfigurationParams() const
   {
-    boost::mutex::scoped_lock sl(_generalMutex);
-    return _queueConfigParamCopy;
+    boost::mutex::scoped_lock sl(generalMutex_);
+    return queueConfigParamCopy_;
   }
 
   void Configuration::updateAllParams()
   {
-    boost::mutex::scoped_lock sl(_generalMutex);
+    boost::mutex::scoped_lock sl(generalMutex_);
     updateLocalDataRetrieverData();
     updateLocalEventServingData();
     updateLocalDQMProcessingData();
@@ -73,14 +73,14 @@ namespace smproxy
 
   void Configuration::setDataRetrieverDefaults(unsigned long instanceNumber)
   {
-    _dataRetrieverParamCopy._smpsInstance = instanceNumber;
-    _dataRetrieverParamCopy._smRegistrationList.clear();
-    _dataRetrieverParamCopy._allowMissingSM = true;
-    _dataRetrieverParamCopy._maxConnectionRetries = 5;
-    _dataRetrieverParamCopy._connectTrySleepTime = 10;
-    _dataRetrieverParamCopy._headerRetryInterval = 5;
-    _dataRetrieverParamCopy._retryInterval = 1;
-    _dataRetrieverParamCopy._sleepTimeIfIdle =
+    dataRetrieverParamCopy_.smpsInstance_ = instanceNumber;
+    dataRetrieverParamCopy_.smRegistrationList_.clear();
+    dataRetrieverParamCopy_.allowMissingSM_ = true;
+    dataRetrieverParamCopy_.maxConnectionRetries_ = 5;
+    dataRetrieverParamCopy_.connectTrySleepTime_ = 10;
+    dataRetrieverParamCopy_.headerRetryInterval_ = 5;
+    dataRetrieverParamCopy_.retryInterval_ = 1;
+    dataRetrieverParamCopy_.sleepTimeIfIdle_ =
       boost::posix_time::milliseconds(100);
 
     std::string tmpString(toolbox::net::getHostName());
@@ -90,77 +90,77 @@ namespace smproxy
       std::string basename = tmpString.substr(0,pos);  
       tmpString = basename;
     }
-    _dataRetrieverParamCopy._hostName = tmpString;
+    dataRetrieverParamCopy_.hostName_ = tmpString;
   }
   
   void Configuration::setEventServingDefaults()
   {
-    _eventServeParamCopy._activeConsumerTimeout = boost::posix_time::seconds(60);
-    _eventServeParamCopy._consumerQueueSize = 10;
-    _eventServeParamCopy._consumerQueuePolicy = "DiscardOld";
-    _eventServeParamCopy._DQMactiveConsumerTimeout = boost::posix_time::seconds(60);
-    _eventServeParamCopy._DQMconsumerQueueSize = 15;
-    _eventServeParamCopy._DQMconsumerQueuePolicy = "DiscardOld";
+    eventServeParamCopy_.activeConsumerTimeout_ = boost::posix_time::seconds(60);
+    eventServeParamCopy_.consumerQueueSize_ = 10;
+    eventServeParamCopy_.consumerQueuePolicy_ = "DiscardOld";
+    eventServeParamCopy_._DQMactiveConsumerTimeout = boost::posix_time::seconds(60);
+    eventServeParamCopy_._DQMconsumerQueueSize = 15;
+    eventServeParamCopy_._DQMconsumerQueuePolicy = "DiscardOld";
   }
 
   void Configuration::setDQMProcessingDefaults()
   {
-    _dqmProcessingParamCopy._collateDQM = true;
-    _dqmProcessingParamCopy._readyTimeDQM = boost::posix_time::seconds(120);
-    _dqmProcessingParamCopy._useCompressionDQM = true;
-    _dqmProcessingParamCopy._compressionLevelDQM = 1;
+    dqmProcessingParamCopy_.collateDQM_ = true;
+    dqmProcessingParamCopy_.readyTimeDQM_ = boost::posix_time::seconds(120);
+    dqmProcessingParamCopy_.useCompressionDQM_ = true;
+    dqmProcessingParamCopy_.compressionLevelDQM_ = 1;
   }
 
   void Configuration::setDQMArchivingDefaults()
   {
-    _dqmArchivingParamCopy._archiveDQM = false;
-    _dqmArchivingParamCopy._filePrefixDQM = "/tmp/DQM";
-    _dqmArchivingParamCopy._archiveIntervalDQM = 1;
+    dqmArchivingParamCopy_.archiveDQM_ = false;
+    dqmArchivingParamCopy_.filePrefixDQM_ = "/tmp/DQM";
+    dqmArchivingParamCopy_.archiveIntervalDQM_ = 1;
   }
 
   void Configuration::setQueueConfigurationDefaults()
   {
-    _queueConfigParamCopy._registrationQueueSize = 128;
-    _queueConfigParamCopy._monitoringSleepSec = boost::posix_time::seconds(1);
+    queueConfigParamCopy_.registrationQueueSize_ = 128;
+    queueConfigParamCopy_.monitoringSleepSec_ = boost::posix_time::seconds(1);
   }
 
   void Configuration::
   setupDataRetrieverInfoSpaceParams(xdata::InfoSpace* infoSpace)
   {
     // copy the initial defaults into the xdata variables
-    stor::utils::getXdataVector(_dataRetrieverParamCopy._smRegistrationList, _smRegistrationList);
-    _allowMissingSM = _dataRetrieverParamCopy._allowMissingSM;
-    _maxConnectionRetries = _dataRetrieverParamCopy._maxConnectionRetries;
-    _connectTrySleepTime = _dataRetrieverParamCopy._connectTrySleepTime;
-    _headerRetryInterval = _dataRetrieverParamCopy._headerRetryInterval;
-    _retryInterval = _dataRetrieverParamCopy._retryInterval;
-    _sleepTimeIfIdle = _dataRetrieverParamCopy._sleepTimeIfIdle.total_milliseconds();
+    stor::utils::getXdataVector(dataRetrieverParamCopy_.smRegistrationList_, smRegistrationList_);
+    allowMissingSM_ = dataRetrieverParamCopy_.allowMissingSM_;
+    maxConnectionRetries_ = dataRetrieverParamCopy_.maxConnectionRetries_;
+    connectTrySleepTime_ = dataRetrieverParamCopy_.connectTrySleepTime_;
+    headerRetryInterval_ = dataRetrieverParamCopy_.headerRetryInterval_;
+    retryInterval_ = dataRetrieverParamCopy_.retryInterval_;
+    sleepTimeIfIdle_ = dataRetrieverParamCopy_.sleepTimeIfIdle_.total_milliseconds();
 
     // bind the local xdata variables to the infospace
-    infoSpace->fireItemAvailable("SMRegistrationList", &_smRegistrationList);
-    infoSpace->fireItemAvailable("allowMissingSM", &_allowMissingSM);
-    infoSpace->fireItemAvailable("maxConnectionRetries", &_maxConnectionRetries);
-    infoSpace->fireItemAvailable("connectTrySleepTime", &_connectTrySleepTime);
-    infoSpace->fireItemAvailable("headerRetryInterval", &_headerRetryInterval);
-    infoSpace->fireItemAvailable("retryInterval", &_retryInterval);
-    infoSpace->fireItemAvailable("sleepTimeIfIdle", &_sleepTimeIfIdle);
+    infoSpace->fireItemAvailable("SMRegistrationList", &smRegistrationList_);
+    infoSpace->fireItemAvailable("allowMissingSM", &allowMissingSM_);
+    infoSpace->fireItemAvailable("maxConnectionRetries", &maxConnectionRetries_);
+    infoSpace->fireItemAvailable("connectTrySleepTime", &connectTrySleepTime_);
+    infoSpace->fireItemAvailable("headerRetryInterval", &headerRetryInterval_);
+    infoSpace->fireItemAvailable("retryInterval", &retryInterval_);
+    infoSpace->fireItemAvailable("sleepTimeIfIdle", &sleepTimeIfIdle_);
   }
   
   void Configuration::
   setupEventServingInfoSpaceParams(xdata::InfoSpace* infoSpace)
   {
     // copy the initial defaults to the xdata variables
-    _activeConsumerTimeout = _eventServeParamCopy._activeConsumerTimeout.total_seconds();
-    _consumerQueueSize = _eventServeParamCopy._consumerQueueSize;
-    _consumerQueuePolicy = _eventServeParamCopy._consumerQueuePolicy;
-    _DQMactiveConsumerTimeout = _eventServeParamCopy._DQMactiveConsumerTimeout.total_seconds();
-    _DQMconsumerQueueSize = _eventServeParamCopy._DQMconsumerQueueSize;
-    _DQMconsumerQueuePolicy = _eventServeParamCopy._DQMconsumerQueuePolicy;
+    activeConsumerTimeout_ = eventServeParamCopy_.activeConsumerTimeout_.total_seconds();
+    consumerQueueSize_ = eventServeParamCopy_.consumerQueueSize_;
+    consumerQueuePolicy_ = eventServeParamCopy_.consumerQueuePolicy_;
+    _DQMactiveConsumerTimeout = eventServeParamCopy_._DQMactiveConsumerTimeout.total_seconds();
+    _DQMconsumerQueueSize = eventServeParamCopy_._DQMconsumerQueueSize;
+    _DQMconsumerQueuePolicy = eventServeParamCopy_._DQMconsumerQueuePolicy;
 
     // bind the local xdata variables to the infospace
-    infoSpace->fireItemAvailable("activeConsumerTimeout", &_activeConsumerTimeout);
-    infoSpace->fireItemAvailable("consumerQueueSize", &_consumerQueueSize);
-    infoSpace->fireItemAvailable("consumerQueuePolicy", &_consumerQueuePolicy);
+    infoSpace->fireItemAvailable("activeConsumerTimeout", &activeConsumerTimeout_);
+    infoSpace->fireItemAvailable("consumerQueueSize", &consumerQueueSize_);
+    infoSpace->fireItemAvailable("consumerQueuePolicy", &consumerQueuePolicy_);
     infoSpace->fireItemAvailable("DQMactiveConsumerTimeout", &_DQMactiveConsumerTimeout);
     infoSpace->fireItemAvailable("DQMconsumerQueueSize", &_DQMconsumerQueueSize);
     infoSpace->fireItemAvailable("DQMconsumerQueuePolicy",&_DQMconsumerQueuePolicy);
@@ -170,105 +170,105 @@ namespace smproxy
   setupDQMProcessingInfoSpaceParams(xdata::InfoSpace* infoSpace)
   {
     // copy the initial defaults to the xdata variables
-    _collateDQM = _dqmProcessingParamCopy._collateDQM;
-    _readyTimeDQM = _dqmProcessingParamCopy._readyTimeDQM.total_seconds();
-    _useCompressionDQM = _dqmProcessingParamCopy._useCompressionDQM;
-    _compressionLevelDQM = _dqmProcessingParamCopy._compressionLevelDQM;
+    collateDQM_ = dqmProcessingParamCopy_.collateDQM_;
+    readyTimeDQM_ = dqmProcessingParamCopy_.readyTimeDQM_.total_seconds();
+    useCompressionDQM_ = dqmProcessingParamCopy_.useCompressionDQM_;
+    compressionLevelDQM_ = dqmProcessingParamCopy_.compressionLevelDQM_;
 
     // bind the local xdata variables to the infospace
-    infoSpace->fireItemAvailable("collateDQM", &_collateDQM);
-    infoSpace->fireItemAvailable("readyTimeDQM", &_readyTimeDQM);
-    infoSpace->fireItemAvailable("useCompressionDQM", &_useCompressionDQM);
-    infoSpace->fireItemAvailable("compressionLevelDQM", &_compressionLevelDQM);
+    infoSpace->fireItemAvailable("collateDQM", &collateDQM_);
+    infoSpace->fireItemAvailable("readyTimeDQM", &readyTimeDQM_);
+    infoSpace->fireItemAvailable("useCompressionDQM", &useCompressionDQM_);
+    infoSpace->fireItemAvailable("compressionLevelDQM", &compressionLevelDQM_);
   }
 
   void Configuration::
   setupDQMArchivingInfoSpaceParams(xdata::InfoSpace* infoSpace)
   {
     // copy the initial defaults to the xdata variables
-    _archiveDQM = _dqmArchivingParamCopy._archiveDQM;
-    _archiveIntervalDQM = _dqmArchivingParamCopy._archiveIntervalDQM;
-    _filePrefixDQM = _dqmArchivingParamCopy._filePrefixDQM;
+    archiveDQM_ = dqmArchivingParamCopy_.archiveDQM_;
+    archiveIntervalDQM_ = dqmArchivingParamCopy_.archiveIntervalDQM_;
+    filePrefixDQM_ = dqmArchivingParamCopy_.filePrefixDQM_;
 
     // bind the local xdata variables to the infospace
-    infoSpace->fireItemAvailable("archiveDQM", &_archiveDQM);
-    infoSpace->fireItemAvailable("archiveIntervalDQM", &_archiveIntervalDQM);
-    infoSpace->fireItemAvailable("filePrefixDQM", &_filePrefixDQM);
+    infoSpace->fireItemAvailable("archiveDQM", &archiveDQM_);
+    infoSpace->fireItemAvailable("archiveIntervalDQM", &archiveIntervalDQM_);
+    infoSpace->fireItemAvailable("filePrefixDQM", &filePrefixDQM_);
   }
   
   void Configuration::
   setupQueueConfigurationInfoSpaceParams(xdata::InfoSpace* infoSpace)
   {
     // copy the initial defaults to the xdata variables
-    _registrationQueueSize = _queueConfigParamCopy._registrationQueueSize;
-    _monitoringSleepSec =
-      stor::utils::duration_to_seconds(_queueConfigParamCopy._monitoringSleepSec);
+    registrationQueueSize_ = queueConfigParamCopy_.registrationQueueSize_;
+    monitoringSleepSec_ =
+      stor::utils::duration_to_seconds(queueConfigParamCopy_.monitoringSleepSec_);
     
     // bind the local xdata variables to the infospace
-    infoSpace->fireItemAvailable("registrationQueueSize", &_registrationQueueSize);
-    infoSpace->fireItemAvailable("monitoringSleepSec", &_monitoringSleepSec);
+    infoSpace->fireItemAvailable("registrationQueueSize", &registrationQueueSize_);
+    infoSpace->fireItemAvailable("monitoringSleepSec", &monitoringSleepSec_);
   }
  
   void Configuration::updateLocalDataRetrieverData()
   {
-    stor::utils::getStdVector(_smRegistrationList, _dataRetrieverParamCopy._smRegistrationList);
-    _dataRetrieverParamCopy._allowMissingSM = _allowMissingSM;
-    _dataRetrieverParamCopy._maxConnectionRetries = _maxConnectionRetries;
-    _dataRetrieverParamCopy._connectTrySleepTime = _connectTrySleepTime;
-    _dataRetrieverParamCopy._headerRetryInterval = _headerRetryInterval;
-    _dataRetrieverParamCopy._retryInterval = _retryInterval;
-    _dataRetrieverParamCopy._sleepTimeIfIdle =
-      boost::posix_time::milliseconds(_sleepTimeIfIdle);
+    stor::utils::getStdVector(smRegistrationList_, dataRetrieverParamCopy_.smRegistrationList_);
+    dataRetrieverParamCopy_.allowMissingSM_ = allowMissingSM_;
+    dataRetrieverParamCopy_.maxConnectionRetries_ = maxConnectionRetries_;
+    dataRetrieverParamCopy_.connectTrySleepTime_ = connectTrySleepTime_;
+    dataRetrieverParamCopy_.headerRetryInterval_ = headerRetryInterval_;
+    dataRetrieverParamCopy_.retryInterval_ = retryInterval_;
+    dataRetrieverParamCopy_.sleepTimeIfIdle_ =
+      boost::posix_time::milliseconds(sleepTimeIfIdle_);
   }
 
   void Configuration::updateLocalEventServingData()
   {
-    _eventServeParamCopy._activeConsumerTimeout =
-      boost::posix_time::seconds( static_cast<int>(_activeConsumerTimeout) );
-    _eventServeParamCopy._consumerQueueSize = _consumerQueueSize;
-    _eventServeParamCopy._consumerQueuePolicy = _consumerQueuePolicy;
-    _eventServeParamCopy._DQMactiveConsumerTimeout = 
+    eventServeParamCopy_.activeConsumerTimeout_ =
+      boost::posix_time::seconds( static_cast<int>(activeConsumerTimeout_) );
+    eventServeParamCopy_.consumerQueueSize_ = consumerQueueSize_;
+    eventServeParamCopy_.consumerQueuePolicy_ = consumerQueuePolicy_;
+    eventServeParamCopy_._DQMactiveConsumerTimeout = 
       boost::posix_time::seconds( static_cast<int>(_DQMactiveConsumerTimeout) );
-    _eventServeParamCopy._DQMconsumerQueueSize = _DQMconsumerQueueSize;
-    _eventServeParamCopy._DQMconsumerQueuePolicy = _DQMconsumerQueuePolicy;
+    eventServeParamCopy_._DQMconsumerQueueSize = _DQMconsumerQueueSize;
+    eventServeParamCopy_._DQMconsumerQueuePolicy = _DQMconsumerQueuePolicy;
     
     // validation
-    if (_eventServeParamCopy._consumerQueueSize < 1)
+    if (eventServeParamCopy_.consumerQueueSize_ < 1)
     {
-      _eventServeParamCopy._consumerQueueSize = 1;
+      eventServeParamCopy_.consumerQueueSize_ = 1;
     }
-    if (_eventServeParamCopy._DQMconsumerQueueSize < 1)
+    if (eventServeParamCopy_._DQMconsumerQueueSize < 1)
     {
-      _eventServeParamCopy._DQMconsumerQueueSize = 1;
+      eventServeParamCopy_._DQMconsumerQueueSize = 1;
     }
   }
 
   void Configuration::updateLocalDQMProcessingData()
   {
-    _dqmProcessingParamCopy._collateDQM = _collateDQM;
-    _dqmProcessingParamCopy._readyTimeDQM =
-      boost::posix_time::seconds( static_cast<int>(_readyTimeDQM) );
-    _dqmProcessingParamCopy._useCompressionDQM = _useCompressionDQM;
-    _dqmProcessingParamCopy._compressionLevelDQM = _compressionLevelDQM;
+    dqmProcessingParamCopy_.collateDQM_ = collateDQM_;
+    dqmProcessingParamCopy_.readyTimeDQM_ =
+      boost::posix_time::seconds( static_cast<int>(readyTimeDQM_) );
+    dqmProcessingParamCopy_.useCompressionDQM_ = useCompressionDQM_;
+    dqmProcessingParamCopy_.compressionLevelDQM_ = compressionLevelDQM_;
   }
 
   void Configuration::updateLocalDQMArchivingData()
   {
-    _dqmArchivingParamCopy._archiveDQM = _archiveDQM;
-    _dqmArchivingParamCopy._archiveIntervalDQM = _archiveIntervalDQM;
-    _dqmArchivingParamCopy._filePrefixDQM = _filePrefixDQM;
+    dqmArchivingParamCopy_.archiveDQM_ = archiveDQM_;
+    dqmArchivingParamCopy_.archiveIntervalDQM_ = archiveIntervalDQM_;
+    dqmArchivingParamCopy_.filePrefixDQM_ = filePrefixDQM_;
   }
 
   void Configuration::updateLocalQueueConfigurationData()
   {
-    _queueConfigParamCopy._registrationQueueSize = _registrationQueueSize;
-    _queueConfigParamCopy._monitoringSleepSec =
-      stor::utils::seconds_to_duration(_monitoringSleepSec);
+    queueConfigParamCopy_.registrationQueueSize_ = registrationQueueSize_;
+    queueConfigParamCopy_.monitoringSleepSec_ =
+      stor::utils::seconds_to_duration(monitoringSleepSec_);
   }
 
   void Configuration::actionPerformed(xdata::Event& ispaceEvent)
   {
-    boost::mutex::scoped_lock sl(_generalMutex);
+    boost::mutex::scoped_lock sl(generalMutex_);
   }
 
 } // namespace smproxy

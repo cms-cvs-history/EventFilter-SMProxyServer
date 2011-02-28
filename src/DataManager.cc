@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.10 2011/02/26 09:17:26 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.11 2011/02/27 18:53:10 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -16,10 +16,10 @@ namespace smproxy
   (
     StateMachine* stateMachine
   ) :
-  _stateMachine(stateMachine),
-  _registrationQueue(stateMachine->getRegistrationQueue())
+  stateMachine_(stateMachine),
+  registrationQueue_(stateMachine->getRegistrationQueue())
   {
-    _watchDogThread.reset(
+    watchDogThread_.reset(
       new boost::thread( boost::bind( &DataManager::checkForStaleConsumers, this) )
     );
   }
@@ -27,16 +27,16 @@ namespace smproxy
   DataManager::~DataManager()
   {
     stop();
-    _watchDogThread->interrupt();
-    _watchDogThread->join();
+    watchDogThread_->interrupt();
+    watchDogThread_->join();
   }
   
   
   void DataManager::start(DataRetrieverParams const& drp)
   {
-    _dataRetrieverParams = drp;
+    dataRetrieverParams_ = drp;
     edm::shutdown_flag = false;
-    _thread.reset(
+    thread_.reset(
       new boost::thread( boost::bind( &DataManager::doIt, this) )
     );
   }
@@ -45,11 +45,11 @@ namespace smproxy
   void DataManager::stop()
   {
     // enqueue a dummy RegistrationInfoBase to tell the thread to stop
-    _registrationQueue->enq_wait( stor::RegPtr() );
-    _thread->join();
+    registrationQueue_->enq_wait( stor::RegPtr() );
+    thread_->join();
 
     edm::shutdown_flag = true;
-    _dataEventRetrievers.clear();
+    dataEventRetrievers_.clear();
   }
   
   
@@ -62,8 +62,8 @@ namespace smproxy
     if ( ! eventConsumer ) return false;
     
     DataEventRetrieverMap::const_iterator pos =
-      _dataEventRetrievers.find(eventConsumer);
-    if ( pos == _dataEventRetrievers.end() ) return false;
+      dataEventRetrievers_.find(eventConsumer);
+    if ( pos == dataEventRetrievers_.end() ) return false;
     
     queueIDs = pos->second->getQueueIDs();
     return true;
@@ -79,8 +79,8 @@ namespace smproxy
     if ( ! dqmEventConsumer ) return false;
     
     DQMEventRetrieverMap::const_iterator pos =
-      _dqmEventRetrievers.find(dqmEventConsumer);
-    if ( pos == _dqmEventRetrievers.end() ) return false;
+      dqmEventRetrievers_.find(dqmEventConsumer);
+    if ( pos == dqmEventRetrievers_.end() ) return false;
     
     queueIDs = pos->second->getQueueIDs();
     return true;
@@ -95,20 +95,20 @@ namespace smproxy
     }
     catch(xcept::Exception &e)
     {
-      _stateMachine->moveToFailedState(e);
+      stateMachine_->moveToFailedState(e);
     }
     catch(std::exception &e)
     {
       XCEPT_DECLARE(exception::Exception,
         sentinelException, e.what());
-      _stateMachine->moveToFailedState(sentinelException);
+      stateMachine_->moveToFailedState(sentinelException);
     }
     catch(...)
     {
       std::string errorMsg = "Unknown exception in watch dog";
       XCEPT_DECLARE(exception::Exception,
         sentinelException, errorMsg);
-      _stateMachine->moveToFailedState(sentinelException);
+      stateMachine_->moveToFailedState(sentinelException);
     }
   }
   
@@ -120,7 +120,7 @@ namespace smproxy
 
     do
     {
-      _registrationQueue->deq_wait(regPtr);
+      registrationQueue_->deq_wait(regPtr);
 
       if ( ! (addEventConsumer(regPtr) || addDQMEventConsumer(regPtr)) )
       {
@@ -138,14 +138,14 @@ namespace smproxy
     
     if ( ! eventConsumer ) return false;
 
-    DataEventRetrieverMap::iterator pos = _dataEventRetrievers.lower_bound(eventConsumer);
-    if ( pos == _dataEventRetrievers.end() || (_dataEventRetrievers.key_comp()(eventConsumer, pos->first)) )
+    DataEventRetrieverMap::iterator pos = dataEventRetrievers_.lower_bound(eventConsumer);
+    if ( pos == dataEventRetrievers_.end() || (dataEventRetrievers_.key_comp()(eventConsumer, pos->first)) )
     {
       // no retriever found for this event requests
       DataEventRetrieverPtr dataEventRetriever(
-        new DataEventRetriever(_stateMachine, eventConsumer)
+        new DataEventRetriever(stateMachine_, eventConsumer)
       );
-      _dataEventRetrievers.insert(pos,
+      dataEventRetrievers_.insert(pos,
         DataEventRetrieverMap::value_type(eventConsumer, dataEventRetriever));
     }
     else
@@ -164,14 +164,14 @@ namespace smproxy
     
     if ( ! dqmEventConsumer ) return false;
 
-    DQMEventRetrieverMap::iterator pos = _dqmEventRetrievers.lower_bound(dqmEventConsumer);
-    if ( pos == _dqmEventRetrievers.end() || (_dqmEventRetrievers.key_comp()(dqmEventConsumer, pos->first)) )
+    DQMEventRetrieverMap::iterator pos = dqmEventRetrievers_.lower_bound(dqmEventConsumer);
+    if ( pos == dqmEventRetrievers_.end() || (dqmEventRetrievers_.key_comp()(dqmEventConsumer, pos->first)) )
     {
       // no retriever found for this DQM event requests
       DQMEventRetrieverPtr dqmEventRetriever(
-        new DQMEventRetriever(_stateMachine, dqmEventConsumer)
+        new DQMEventRetriever(stateMachine_, dqmEventConsumer)
       );
-      _dqmEventRetrievers.insert(pos,
+      dqmEventRetrievers_.insert(pos,
         DQMEventRetrieverMap::value_type(dqmEventConsumer, dqmEventRetriever));
     }
     else
@@ -195,20 +195,20 @@ namespace smproxy
     }
     catch(xcept::Exception &e)
     {
-      _stateMachine->moveToFailedState(e);
+      stateMachine_->moveToFailedState(e);
     }
     catch(std::exception &e)
     {
       XCEPT_DECLARE(exception::Exception,
         sentinelException, e.what());
-      _stateMachine->moveToFailedState(sentinelException);
+      stateMachine_->moveToFailedState(sentinelException);
     }
     catch(...)
     {
       std::string errorMsg = "Unknown exception in watch dog";
       XCEPT_DECLARE(exception::Exception,
         sentinelException, errorMsg);
-      _stateMachine->moveToFailedState(sentinelException);
+      stateMachine_->moveToFailedState(sentinelException);
     }
   }
   
@@ -216,9 +216,9 @@ namespace smproxy
   void DataManager::checkForStaleConsumers()
   {
     EventQueueCollectionPtr eventQueueCollection =
-      _stateMachine->getEventQueueCollection();
+      stateMachine_->getEventQueueCollection();
     stor::DQMEventQueueCollectionPtr dqmEventQueueCollection =
-      _stateMachine->getDQMEventQueueCollection();
+      stateMachine_->getDQMEventQueueCollection();
     
     while (true)
     {

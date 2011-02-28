@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.h,v 1.22.2.4 2011/01/26 11:15:40 mommsen Exp $
+// $Id: SMProxyServer.h,v 1.22.2.5 2011/02/08 16:51:51 mommsen Exp $
 /// @file: SMProxyServer.h 
 
 #ifndef EventFilter_SMProxyServer_SMProxyServer_h
@@ -24,8 +24,8 @@ namespace smproxy {
    * Main class of the SMProxyServer XDAQ application
    *
    * $Author: mommsen $
-   * $Revision: 1.22.2.4 $
-   * $Date: 2011/01/26 11:15:40 $
+   * $Revision: 1.22.2.5 $
+   * $Date: 2011/02/08 16:51:51 $
    */
 
   class SMProxyServer: public xdaq::Application
@@ -135,13 +135,13 @@ namespace smproxy {
      */
     void startWorkerThreads();
 
-    StateMachinePtr _stateMachine;
+    StateMachinePtr stateMachine_;
 
     typedef stor::ConsumerUtils<Configuration,EventQueueCollection> ConsumerUtils_t;
-    boost::scoped_ptr<ConsumerUtils_t> _consumerUtils;
+    boost::scoped_ptr<ConsumerUtils_t> consumerUtils_;
 
     
-    boost::scoped_ptr<SMPSWebPageHelper> _smpsWebPageHelper;
+    boost::scoped_ptr<SMPSWebPageHelper> smpsWebPageHelper_;
 
   };
 

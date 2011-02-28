@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.44.2.5 2011/02/08 16:51:51 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.2.6 2011/02/27 18:53:10 mommsen Exp $
 /// @file: SMProxyServer.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -99,20 +99,20 @@ void SMProxyServer::bindConsumerCallbacks()
 
 void SMProxyServer::initializeSharedResources()
 {
-  _stateMachine.reset( new StateMachine(this) );
+  stateMachine_.reset( new StateMachine(this) );
   
-  _consumerUtils.reset( new ConsumerUtils_t (
-      _stateMachine->getConfiguration(),
-      _stateMachine->getRegistrationCollection(),
-      _stateMachine->getRegistrationQueue(),
-      _stateMachine->getInitMsgCollection(),
-      _stateMachine->getEventQueueCollection(),
-      _stateMachine->getDQMEventQueueCollection(),
-      _stateMachine->getStatisticsReporter()->alarmHandler()
+  consumerUtils_.reset( new ConsumerUtils_t (
+      stateMachine_->getConfiguration(),
+      stateMachine_->getRegistrationCollection(),
+      stateMachine_->getRegistrationQueue(),
+      stateMachine_->getInitMsgCollection(),
+      stateMachine_->getEventQueueCollection(),
+      stateMachine_->getDQMEventQueueCollection(),
+      stateMachine_->getStatisticsReporter()->alarmHandler()
     ) );
 
-  _smpsWebPageHelper.reset( new SMPSWebPageHelper(
-      getApplicationDescriptor(), _stateMachine));
+  smpsWebPageHelper_.reset( new SMPSWebPageHelper(
+      getApplicationDescriptor(), stateMachine_));
 }
 
 
@@ -121,24 +121,24 @@ void SMProxyServer::startWorkerThreads()
   // Start the workloops
   try
   {
-    _stateMachine->getStatisticsReporter()->startWorkLoop("theStatisticsReporter");
+    stateMachine_->getStatisticsReporter()->startWorkLoop("theStatisticsReporter");
   }
   catch(xcept::Exception &e)
   {
-    _stateMachine->moveToFailedState(e);
+    stateMachine_->moveToFailedState(e);
   }
   catch(std::exception &e)
   {
     XCEPT_DECLARE(exception::Exception,
       sentinelException, e.what());
-    _stateMachine->moveToFailedState(sentinelException);
+    stateMachine_->moveToFailedState(sentinelException);
   }
   catch(...)
   {
     std::string errorMsg = "Unknown exception when starting the workloops";
     XCEPT_DECLARE(exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->moveToFailedState(sentinelException);
+    stateMachine_->moveToFailedState(sentinelException);
   }
 }
 
@@ -150,7 +150,7 @@ void SMProxyServer::startWorkerThreads()
 void SMProxyServer::css(xgi::Input *in, xgi::Output *out)
 throw (xgi::exception::Exception)
 {
-  _smpsWebPageHelper->css(in,out);
+  smpsWebPageHelper_->css(in,out);
 }
 
 
@@ -161,7 +161,7 @@ throw (xgi::exception::Exception)
   
   try
   {
-    _smpsWebPageHelper->defaultWebPage(out);
+    smpsWebPageHelper_->defaultWebPage(out);
   }
   catch(std::exception &e)
   {
@@ -190,7 +190,7 @@ throw( xgi::exception::Exception )
 
   try
   {
-    _smpsWebPageHelper->dataRetrieverWebPage(out);
+    smpsWebPageHelper_->dataRetrieverWebPage(out);
   }
   catch( std::exception &e )
   {
@@ -217,7 +217,7 @@ throw( xgi::exception::Exception )
 
   try
   {
-    _smpsWebPageHelper->consumerStatisticsWebPage(out);
+    smpsWebPageHelper_->consumerStatisticsWebPage(out);
   }
   catch( std::exception &e )
   {
@@ -242,7 +242,7 @@ throw (xgi::exception::Exception)
 
   try
   {
-    _smpsWebPageHelper->dqmEventStatisticsWebPage(out);
+    smpsWebPageHelper_->dqmEventStatisticsWebPage(out);
   }
   catch(std::exception &e)
   {
@@ -280,19 +280,19 @@ xoap::MessageReference SMProxyServer::handleFSMSoapMessage( xoap::MessageReferen
     errorMsg = "Failed to process '" + command + "' state machine event: ";
     if (command == "Configure")
     {
-      newState = _stateMachine->processEvent( Configure() );
+      newState = stateMachine_->processEvent( Configure() );
     }
     else if (command == "Enable")
     {
-      newState = _stateMachine->processEvent( Enable() );
+      newState = stateMachine_->processEvent( Enable() );
     }
     else if (command == "Stop")
     {
-      newState = _stateMachine->processEvent( Stop() );
+      newState = stateMachine_->processEvent( Stop() );
     }
     else if (command == "Halt")
     {
-      newState = _stateMachine->processEvent( Halt() );
+      newState = stateMachine_->processEvent( Halt() );
     }
     else
     {
@@ -307,24 +307,24 @@ xoap::MessageReference SMProxyServer::handleFSMSoapMessage( xoap::MessageReferen
     errorMsg += e.explainSelf();
     XCEPT_DECLARE(xoap::exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->moveToFailedState(sentinelException);
+    stateMachine_->moveToFailedState(sentinelException);
   }
   catch (xcept::Exception &e) {
     XCEPT_DECLARE_NESTED(xoap::exception::Exception,
       sentinelException, errorMsg, e);
-    _stateMachine->moveToFailedState(sentinelException);
+    stateMachine_->moveToFailedState(sentinelException);
   }
   catch (std::exception& e) {
     errorMsg += e.what();
     XCEPT_DECLARE(xoap::exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->moveToFailedState(sentinelException);
+    stateMachine_->moveToFailedState(sentinelException);
   }
   catch (...) {
     errorMsg += "Unknown exception";
     XCEPT_DECLARE(xoap::exception::Exception,
       sentinelException, errorMsg);
-    _stateMachine->moveToFailedState(sentinelException);
+    stateMachine_->moveToFailedState(sentinelException);
   }
 
   return returnMsg;
@@ -339,7 +339,7 @@ void
 SMProxyServer::processConsumerRegistrationRequest( xgi::Input* in, xgi::Output* out )
   throw( xgi::exception::Exception )
 {
-  _consumerUtils->processConsumerRegistrationRequest(in,out);
+  consumerUtils_->processConsumerRegistrationRequest(in,out);
 }
 
 
@@ -347,7 +347,7 @@ void
 SMProxyServer::processConsumerHeaderRequest( xgi::Input* in, xgi::Output* out )
   throw( xgi::exception::Exception )
 {
-  _consumerUtils->processConsumerHeaderRequest(in,out);
+  consumerUtils_->processConsumerHeaderRequest(in,out);
 }
 
 
@@ -355,7 +355,7 @@ void
 SMProxyServer::processConsumerEventRequest( xgi::Input* in, xgi::Output* out )
   throw( xgi::exception::Exception )
 {
-  _consumerUtils->processConsumerEventRequest(in,out);
+  consumerUtils_->processConsumerEventRequest(in,out);
 }
 
 
@@ -363,7 +363,7 @@ void
 SMProxyServer::processDQMConsumerRegistrationRequest( xgi::Input* in, xgi::Output* out )
   throw( xgi::exception::Exception )
 {
-  _consumerUtils->processDQMConsumerRegistrationRequest(in,out);
+  consumerUtils_->processDQMConsumerRegistrationRequest(in,out);
 }
 
 
@@ -371,7 +371,7 @@ void
 SMProxyServer::processDQMConsumerEventRequest( xgi::Input* in, xgi::Output* out )
   throw( xgi::exception::Exception )
 {
-  _consumerUtils->processDQMConsumerEventRequest(in,out);
+  consumerUtils_->processDQMConsumerEventRequest(in,out);
 }
 
 

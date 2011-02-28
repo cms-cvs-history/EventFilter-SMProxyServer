@@ -1,4 +1,4 @@
-// $Id: StatisticsReporter.h,v 1.1.2.2 2011/01/24 12:43:17 mommsen Exp $
+// $Id: StatisticsReporter.h,v 1.1.2.3 2011/01/26 16:06:54 mommsen Exp $
 /// @file: StatisticsReporter.h 
 
 #ifndef EventFilter_SMProxyServer_StatisticsReporter_h
@@ -35,8 +35,8 @@ namespace smproxy {
    * statistics for all MonitorCollections.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.2 $
-   * $Date: 2011/01/24 12:43:17 $
+   * $Revision: 1.1.2.3 $
+   * $Date: 2011/01/26 16:06:54 $
    */
   
   class StatisticsReporter : public toolbox::lang::Class, public xdata::ActionListener
@@ -52,30 +52,30 @@ namespace smproxy {
     virtual ~StatisticsReporter();
 
     const DataRetrieverMonitorCollection& getDataRetrieverMonitorCollection() const
-    { return _dataRetrieverMonCollection; }
+    { return dataRetrieverMonCollection_; }
 
     DataRetrieverMonitorCollection& getDataRetrieverMonitorCollection()
-    { return _dataRetrieverMonCollection; }
+    { return dataRetrieverMonCollection_; }
 
     const stor::DQMEventMonitorCollection& getDQMEventMonitorCollection() const
-    { return _dqmEventMonCollection; }
+    { return dqmEventMonCollection_; }
 
     stor::DQMEventMonitorCollection& getDQMEventMonitorCollection()
-    { return _dqmEventMonCollection; }
+    { return dqmEventMonCollection_; }
 
 
     const stor::EventConsumerMonitorCollection& getEventConsumerMonitorCollection() const
-    { return _eventConsumerMonCollection; }
+    { return eventConsumerMonCollection_; }
 
     stor::EventConsumerMonitorCollection& getEventConsumerMonitorCollection()
-    { return _eventConsumerMonCollection; }
+    { return eventConsumerMonCollection_; }
 
 
     const stor::DQMConsumerMonitorCollection& getDQMConsumerMonitorCollection() const
-    { return _dqmConsumerMonCollection; }
+    { return dqmConsumerMonCollection_; }
 
     stor::DQMConsumerMonitorCollection& getDQMConsumerMonitorCollection()
-    { return _dqmConsumerMonCollection; }
+    { return dqmConsumerMonCollection_; }
 
 
     /**
@@ -91,7 +91,7 @@ namespace smproxy {
     /**
      * Access alarm handler
      */
-    stor::AlarmHandlerPtr alarmHandler() { return _alarmHandler; }
+    stor::AlarmHandlerPtr alarmHandler() { return alarmHandler_; }
 
     /**
      * Update the variables put into the application info space
@@ -114,21 +114,21 @@ namespace smproxy {
     void calculateStatistics();
     void updateInfoSpace();
 
-    xdaq::Application* _app;
-    stor::AlarmHandlerPtr _alarmHandler;
-    stor::utils::duration_t _monitoringSleepSec;
-    stor::utils::time_point_t _lastMonitorAction;
+    xdaq::Application* app_;
+    stor::AlarmHandlerPtr alarmHandler_;
+    stor::utils::duration_t monitoringSleepSec_;
+    stor::utils::time_point_t lastMonitorAction_;
 
-    DataRetrieverMonitorCollection _dataRetrieverMonCollection;
-    stor::DQMEventMonitorCollection _dqmEventMonCollection;
-    stor::EventConsumerMonitorCollection _eventConsumerMonCollection;
-    stor::DQMConsumerMonitorCollection _dqmConsumerMonCollection;
-    toolbox::task::WorkLoop* _monitorWL;      
-    bool _doMonitoring;
+    DataRetrieverMonitorCollection dataRetrieverMonCollection_;
+    stor::DQMEventMonitorCollection dqmEventMonCollection_;
+    stor::EventConsumerMonitorCollection eventConsumerMonCollection_;
+    stor::DQMConsumerMonitorCollection dqmConsumerMonCollection_;
+    toolbox::task::WorkLoop* monitorWL_;      
+    bool doMonitoring_;
 
     // Stuff dealing with the monitoring info space
-    xdata::InfoSpace *_infoSpace;
-    InfoSpaceItemNames _infoSpaceItemNames;
+    xdata::InfoSpace *infoSpace_;
+    InfoSpaceItemNames infoSpaceItemNames_;
 
   };
 

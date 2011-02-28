@@ -1,4 +1,4 @@
-// $Id: DQMEventMsg.h,v 1.1.2.3 2011/02/24 10:58:44 mommsen Exp $
+// $Id: DQMEventMsg.h,v 1.1.2.1 2011/02/27 13:58:12 mommsen Exp $
 /// @file: DQMEventMsg.h 
 
 #ifndef EventFilter_SMProxyServer_DQMEventMsg_h
@@ -18,8 +18,8 @@ namespace smproxy {
    * APIs required for SMPS
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.3 $
-   * $Date: 2011/02/24 10:58:44 $
+   * $Revision: 1.1.2.1 $
+   * $Date: 2011/02/27 13:58:12 $
    */
 
   class DQMEventMsg
@@ -72,11 +72,11 @@ namespace smproxy {
 
   private:
     typedef std::vector<unsigned char> DQMEventMsgBuffer;
-    boost::shared_ptr<DQMEventMsgBuffer> _buf;
-    bool _faulty;
+    boost::shared_ptr<DQMEventMsgBuffer> buf_;
+    bool faulty_;
 
-    stor::QueueIDs _queueIDs;
-    stor::DQMKey _dqmKey;
+    stor::QueueIDs queueIDs_;
+    stor::DQMKey dqmKey_;
   };
   
 } // namespace smproxy

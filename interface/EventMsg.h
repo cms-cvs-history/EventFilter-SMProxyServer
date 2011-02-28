@@ -1,4 +1,4 @@
-// $Id: EventMsg.h,v 1.1.2.3 2011/02/24 10:58:44 mommsen Exp $
+// $Id: EventMsg.h,v 1.1.2.4 2011/02/27 13:58:12 mommsen Exp $
 /// @file: EventMsg.h 
 
 #ifndef EventFilter_SMProxyServer_EventMsg_h
@@ -17,8 +17,8 @@ namespace smproxy {
    * APIs required for SMPS
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.3 $
-   * $Date: 2011/02/24 10:58:44 $
+   * $Revision: 1.1.2.4 $
+   * $Date: 2011/02/27 13:58:12 $
    */
 
   class EventMsg
@@ -66,10 +66,10 @@ namespace smproxy {
 
   private:
     typedef std::vector<unsigned char> EventMsgBuffer;
-    boost::shared_ptr<EventMsgBuffer> _buf;
-    bool _faulty;
+    boost::shared_ptr<EventMsgBuffer> buf_;
+    bool faulty_;
 
-    stor::QueueIDs _queueIDs;
+    stor::QueueIDs queueIDs_;
   };
   
 } // namespace smproxy

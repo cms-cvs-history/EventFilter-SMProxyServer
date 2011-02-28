@@ -1,4 +1,4 @@
-// $Id: StateMachine.h,v 1.1.2.6 2011/02/11 12:13:44 mommsen Exp $
+// $Id: StateMachine.h,v 1.1.2.7 2011/02/27 18:53:09 mommsen Exp $
 /// @file: StateMachine.h 
 
 #ifndef EventFilter_SMProxyServer_StateMachine_h
@@ -48,13 +48,13 @@ namespace smproxy
   class Fail : public boost::statechart::event<Fail>
   {
   public:
-    Fail(xcept::Exception& exception) : _exception(exception) {};
-    std::string getReason() const { return _exception.message(); }
-    std::string getTraceback() const { return xcept::stdformat_exception_history(_exception); }
-    xcept::Exception& getException() const { return _exception; }
+    Fail(xcept::Exception& exception) : exception_(exception) {};
+    std::string getReason() const { return exception_.message(); }
+    std::string getTraceback() const { return xcept::stdformat_exception_history(exception_); }
+    xcept::Exception& getException() const { return exception_; }
 
   private:
-    mutable xcept::Exception _exception;
+    mutable xcept::Exception exception_;
   };
 
   struct StateName {
@@ -84,30 +84,30 @@ namespace smproxy
     void unconsumed_event(const boost::statechart::event_base&);
 
     std::string getReasonForFailed()
-    { return _reasonForFailed; }
+    { return reasonForFailed_; }
     std::string getStateName()
     { return state_cast<const StateName&>().stateName(); }
     std::string getExternallyVisibleStateName()
-    { return _stateName.toString(); }
+    { return stateName_.toString(); }
 
     ConfigurationPtr getConfiguration() const
-    { return _configuration; }
+    { return configuration_; }
     DataManagerPtr getDataManager() const
-    { return _dataManager; }
+    { return dataManager_; }
     stor::RegistrationCollectionPtr getRegistrationCollection() const
-    { return _registrationCollection; }
+    { return registrationCollection_; }
     stor::RegistrationQueuePtr getRegistrationQueue() const
-    { return  _registrationQueue; }
+    { return  registrationQueue_; }
     stor::InitMsgCollectionPtr getInitMsgCollection() const
-    { return _initMsgCollection; }
+    { return initMsgCollection_; }
     EventQueueCollectionPtr getEventQueueCollection() const
-    { return _eventQueueCollection; }
+    { return eventQueueCollection_; }
     stor::DQMEventQueueCollectionPtr getDQMEventQueueCollection() const
-    { return _dqmEventQueueCollection; }
+    { return dqmEventQueueCollection_; }
     StatisticsReporterPtr getStatisticsReporter() const
-    { return _statisticsReporter; }
+    { return statisticsReporter_; }
     xdaq::ApplicationDescriptor* getApplicationDescriptor() const
-    { return _app->getApplicationDescriptor(); }
+    { return app_->getApplicationDescriptor(); }
 
     void updateConfiguration();
     void setQueueSizes();
@@ -120,22 +120,22 @@ namespace smproxy
     
   private:
 
-    xdaq::Application* _app;
-    xdaq2rc::RcmsStateNotifier _rcmsStateNotifier;
-    ConfigurationPtr _configuration;
-    DataManagerPtr _dataManager;
-    stor::RegistrationCollectionPtr _registrationCollection;
-    stor::RegistrationQueuePtr _registrationQueue;
-    stor::InitMsgCollectionPtr _initMsgCollection;
-    StatisticsReporterPtr _statisticsReporter;
-    EventQueueCollectionPtr _eventQueueCollection;
-    stor::DQMEventQueueCollectionPtr _dqmEventQueueCollection;
+    xdaq::Application* app_;
+    xdaq2rc::RcmsStateNotifier rcmsStateNotifier_;
+    ConfigurationPtr configuration_;
+    DataManagerPtr dataManager_;
+    stor::RegistrationCollectionPtr registrationCollection_;
+    stor::RegistrationQueuePtr registrationQueue_;
+    stor::InitMsgCollectionPtr initMsgCollection_;
+    StatisticsReporterPtr statisticsReporter_;
+    EventQueueCollectionPtr eventQueueCollection_;
+    stor::DQMEventQueueCollectionPtr dqmEventQueueCollection_;
 
-    mutable boost::mutex _eventMutex;
+    mutable boost::mutex eventMutex_;
     
-    std::string _appNameAndInstance;
-    std::string _reasonForFailed;
-    xdata::String _stateName;
+    std::string appNameAndInstance_;
+    std::string reasonForFailed_;
+    xdata::String stateName_;
     
   };
   

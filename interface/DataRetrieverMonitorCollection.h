@@ -1,4 +1,4 @@
-// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.5 2011/02/17 13:19:28 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.6 2011/02/26 09:17:26 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.h 
 
 #ifndef EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
@@ -26,8 +26,8 @@ namespace smproxy {
    * A collection of MonitoredQuantities related to data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.5 $
-   * $Date: 2011/02/17 13:19:28 $
+   * $Revision: 1.1.2.6 $
+   * $Date: 2011/02/26 09:17:26 $
    */
   
   class DataRetrieverMonitorCollection : public stor::MonitorCollection
@@ -103,13 +103,13 @@ namespace smproxy {
 
   private:
     
-    stor::MonitoredQuantity _totalSize;
+    stor::MonitoredQuantity totalSize_;
 
     struct DataRetrieverMQ
     {
-      stor::RegPtr _regPtr;
-      ConnectionStatus _connectionStatus;
-      stor::MonitoredQuantity _size;       //kB
+      stor::RegPtr regPtr_;
+      ConnectionStatus connectionStatus_;
+      stor::MonitoredQuantity size_;       //kB
 
       DataRetrieverMQ
       (
@@ -122,16 +122,16 @@ namespace smproxy {
     DataRetrieverMonitorCollection(DataRetrieverMonitorCollection const&);
     DataRetrieverMonitorCollection& operator=(DataRetrieverMonitorCollection const&);
 
-    const stor::utils::duration_t _updateInterval;
+    const stor::utils::duration_t updateInterval_;
     typedef boost::shared_ptr<DataRetrieverMQ> DataRetrieverMQPtr;
     typedef std::map<ConnectionID, DataRetrieverMQPtr> RetrieverMqMap;
-    RetrieverMqMap _retrieverMqMap;
+    RetrieverMqMap retrieverMqMap_;
 
     typedef std::map<std::string, stor::MonitoredQuantityPtr> ConnectionMqMap;
-    ConnectionMqMap _connectionMqMap;
+    ConnectionMqMap connectionMqMap_;
 
-    mutable boost::mutex _statsMutex;
-    ConnectionID _nextConnectionId;
+    mutable boost::mutex statsMutex_;
+    ConnectionID nextConnectionId_;
 
     virtual void do_calculateStatistics();
     virtual void do_reset();
@@ -143,7 +143,7 @@ namespace smproxy {
     public:
 
       EventTypeMqMap(const stor::utils::duration_t& updateInterval)
-      : _updateInterval(updateInterval) {}
+      : updateInterval_(updateInterval) {}
 
       bool insert(const stor::RegPtr);
       bool addSample(const stor::RegPtr, const double& sizeKB);
@@ -161,17 +161,17 @@ namespace smproxy {
       typedef std::map<stor::EventConsRegPtr, stor::MonitoredQuantityPtr,
                        stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo>
                        > EventMap;
-      EventMap _eventMap;
+      EventMap eventMap_;
       
       typedef std::map<stor::DQMEventConsRegPtr, stor::MonitoredQuantityPtr,
                      stor::utils::ptr_comp<stor::DQMEventConsumerRegistrationInfo>
                      > DQMEventMap;
-      DQMEventMap _dqmEventMap;
+      DQMEventMap dqmEventMap_;
       
-      const stor::utils::duration_t _updateInterval;
+      const stor::utils::duration_t updateInterval_;
     };
 
-    EventTypeMqMap _eventTypeMqMap;
+    EventTypeMqMap eventTypeMqMap_;
 
   };
 

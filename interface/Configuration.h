@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.10 2011/02/26 09:17:26 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.11 2011/02/27 13:57:28 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -27,17 +27,17 @@ namespace smproxy
   struct DataRetrieverParams
   {
     typedef std::vector<std::string> SMRegistrationList;
-    SMRegistrationList _smRegistrationList;
-    bool _allowMissingSM;
-    uint32_t _maxConnectionRetries;
-    uint32_t _connectTrySleepTime;
-    uint32_t _headerRetryInterval;
-    uint32_t _retryInterval;
-    stor::utils::duration_t _sleepTimeIfIdle;
+    SMRegistrationList smRegistrationList_;
+    bool allowMissingSM_;
+    uint32_t maxConnectionRetries_;
+    uint32_t connectTrySleepTime_;
+    uint32_t headerRetryInterval_;
+    uint32_t retryInterval_;
+    stor::utils::duration_t sleepTimeIfIdle_;
 
     // not mapped to infospace params
-    uint32_t _smpsInstance;
-    std::string _hostName;
+    uint32_t smpsInstance_;
+    std::string hostName_;
   };
 
   /**
@@ -46,9 +46,9 @@ namespace smproxy
    */
   struct DQMArchivingParams
   {
-    bool _archiveDQM;
-    std::string _filePrefixDQM;
-    unsigned int _archiveIntervalDQM;
+    bool archiveDQM_;
+    std::string filePrefixDQM_;
+    unsigned int archiveIntervalDQM_;
   };
 
   /**
@@ -57,8 +57,8 @@ namespace smproxy
    */
   struct QueueConfigurationParams
   {
-    uint32_t _registrationQueueSize;
-    stor::utils::duration_t _monitoringSleepSec;
+    uint32_t registrationQueueSize_;
+    stor::utils::duration_t monitoringSleepSec_;
   };
 
   /**
@@ -67,8 +67,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.10 $
-   * $Date: 2011/02/26 09:17:26 $
+   * $Revision: 1.1.2.11 $
+   * $Date: 2011/02/27 13:57:28 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -159,40 +159,40 @@ namespace smproxy
     void updateLocalDQMArchivingData();
     void updateLocalQueueConfigurationData();
 
-    struct DataRetrieverParams _dataRetrieverParamCopy;
-    struct stor::EventServingParams _eventServeParamCopy;
-    struct stor::DQMProcessingParams _dqmProcessingParamCopy;
-    struct DQMArchivingParams _dqmArchivingParamCopy;
-    struct QueueConfigurationParams _queueConfigParamCopy;
+    struct DataRetrieverParams dataRetrieverParamCopy_;
+    struct stor::EventServingParams eventServeParamCopy_;
+    struct stor::DQMProcessingParams dqmProcessingParamCopy_;
+    struct DQMArchivingParams dqmArchivingParamCopy_;
+    struct QueueConfigurationParams queueConfigParamCopy_;
 
-    mutable boost::mutex _generalMutex;
+    mutable boost::mutex generalMutex_;
     
-    xdata::Vector<xdata::String> _smRegistrationList;
-    xdata::Boolean _allowMissingSM;
-    xdata::UnsignedInteger32 _maxConnectionRetries;
-    xdata::UnsignedInteger32 _connectTrySleepTime; // seconds
-    xdata::UnsignedInteger32 _headerRetryInterval; // seconds
-    xdata::UnsignedInteger32 _retryInterval; // seconds
-    xdata::UnsignedInteger32 _sleepTimeIfIdle;  // milliseconds
+    xdata::Vector<xdata::String> smRegistrationList_;
+    xdata::Boolean allowMissingSM_;
+    xdata::UnsignedInteger32 maxConnectionRetries_;
+    xdata::UnsignedInteger32 connectTrySleepTime_; // seconds
+    xdata::UnsignedInteger32 headerRetryInterval_; // seconds
+    xdata::UnsignedInteger32 retryInterval_; // seconds
+    xdata::UnsignedInteger32 sleepTimeIfIdle_;  // milliseconds
 
-    xdata::Boolean _collateDQM;
-    xdata::Integer _readyTimeDQM;  // seconds
-    xdata::Boolean _useCompressionDQM;
-    xdata::Integer _compressionLevelDQM;
+    xdata::Boolean collateDQM_;
+    xdata::Integer readyTimeDQM_;  // seconds
+    xdata::Boolean useCompressionDQM_;
+    xdata::Integer compressionLevelDQM_;
 
-    xdata::Boolean _archiveDQM;
-    xdata::String  _filePrefixDQM;
-    xdata::Integer _archiveIntervalDQM;  // lumi sections
+    xdata::Boolean archiveDQM_;
+    xdata::String  filePrefixDQM_;
+    xdata::Integer archiveIntervalDQM_;  // lumi sections
     
-    xdata::Integer _activeConsumerTimeout;  // seconds
-    xdata::Integer _consumerQueueSize;
-    xdata::String  _consumerQueuePolicy;
+    xdata::Integer activeConsumerTimeout_;  // seconds
+    xdata::Integer consumerQueueSize_;
+    xdata::String  consumerQueuePolicy_;
     xdata::Integer _DQMactiveConsumerTimeout;  // seconds
     xdata::Integer _DQMconsumerQueueSize;
     xdata::String  _DQMconsumerQueuePolicy;
     
-    xdata::UnsignedInteger32 _registrationQueueSize;
-    xdata::Double _monitoringSleepSec;  // seconds
+    xdata::UnsignedInteger32 registrationQueueSize_;
+    xdata::Double monitoringSleepSec_;  // seconds
 
   };
 

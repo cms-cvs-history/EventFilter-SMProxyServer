@@ -1,4 +1,4 @@
-// $Id: DQMEventMsg.cc,v 1.1.2.3 2011/02/24 10:59:26 mommsen Exp $
+// $Id: DQMEventMsg.cc,v 1.1.2.1 2011/02/27 13:59:11 mommsen Exp $
 /// @file: DQMEventMsg.cc
 
 #include "EventFilter/SMProxyServer/interface/DQMEventMsg.h"
@@ -8,70 +8,70 @@ namespace smproxy
 {
 
   DQMEventMsg::DQMEventMsg() :
-  _faulty(true)
+  faulty_(true)
   {}
   
   
   DQMEventMsg::DQMEventMsg(const DQMEventMsgView& dqmEventMsgView) :
-  _faulty(false)
+  faulty_(false)
   {
-    _buf.reset( new DQMEventMsgBuffer(dqmEventMsgView.size()) );
+    buf_.reset( new DQMEventMsgBuffer(dqmEventMsgView.size()) );
     std::copy(
       dqmEventMsgView.startAddress(),
       dqmEventMsgView.startAddress()+dqmEventMsgView.size(),
-      &(*_buf)[0]
+      &(*buf_)[0]
     );
-    _dqmKey.runNumber = dqmEventMsgView.runNumber();
-    _dqmKey.lumiSection = dqmEventMsgView.lumiSection();
-    _dqmKey.topLevelFolderName = dqmEventMsgView.topFolderName();
+    dqmKey_.runNumber = dqmEventMsgView.runNumber();
+    dqmKey_.lumiSection = dqmEventMsgView.lumiSection();
+    dqmKey_.topLevelFolderName = dqmEventMsgView.topFolderName();
   }
   
   
   void DQMEventMsg::tagForDQMEventConsumers(const stor::QueueIDs& queueIDs)
   {
-    _queueIDs = queueIDs;
+    queueIDs_ = queueIDs;
   }
   
   
   const stor::QueueIDs& DQMEventMsg::getDQMEventConsumerTags() const
   {
-    return _queueIDs;
+    return queueIDs_;
   }
   
   
   const stor::DQMKey& DQMEventMsg::dqmKey() const
   {
-    return _dqmKey;
+    return dqmKey_;
   }
 
   
   size_t DQMEventMsg::memoryUsed() const
   {
-    return sizeof(_buf);
+    return sizeof(buf_);
   }
   
   
   unsigned long DQMEventMsg::totalDataSize() const
   {
-    return _buf->size();
+    return buf_->size();
   }
   
   
   unsigned char* DQMEventMsg::dataLocation() const
   {
-    return &(*_buf)[0];
+    return &(*buf_)[0];
   }
   
   
   bool DQMEventMsg::empty() const
   {
-    return (_buf.get() == 0);
+    return (buf_.get() == 0);
   }
 
 
   bool DQMEventMsg::faulty() const
   {
-    return _faulty;
+    return faulty_;
   }
 
 } // namespace smproxy

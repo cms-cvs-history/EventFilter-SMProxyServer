@@ -1,4 +1,4 @@
-// $Id: States.h,v 1.1.2.2 2011/01/21 15:54:56 mommsen Exp $
+// $Id: States.h,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
 /// @file: States.h 
 
 #ifndef EventFilter_SMProxyServer_States_h
@@ -65,24 +65,24 @@ namespace smproxy
   {
   public:
     std::string stateName() const
-    { return _stateName; }
+    { return stateName_; }
 
   protected:
     typedef boost::statechart::state<MostDerived, Context, InnerInitial, historyMode> boost_state;
     typedef State my_state;
     
     State(const std::string stateName, typename boost_state::my_context& c) :
-    boost_state(c), _stateName(stateName) {};
+    boost_state(c), stateName_(stateName) {};
     virtual ~State() {};
 
     virtual void entryAction() {};
     virtual void exitAction() {};
 
-    const std::string _stateName;
+    const std::string stateName_;
 
     void safeEntryAction()
     {
-      std::string msg = "Failed to enter " + _stateName + " state";
+      std::string msg = "Failed to enter " + stateName_ + " state";
       try
       {
         entryAction();
@@ -112,7 +112,7 @@ namespace smproxy
 
     void safeExitAction()
     {
-      std::string msg = "Failed to leave " + _stateName + " state";
+      std::string msg = "Failed to leave " + stateName_ + " state";
       try
       {
         exitAction();

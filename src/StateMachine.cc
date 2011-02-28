@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.9 2011/02/17 13:49:31 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.10 2011/02/27 18:53:10 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -20,61 +20,61 @@ namespace smproxy
   (
     xdaq::Application* app
   ):
-  _app(app),
-  _rcmsStateNotifier
+  app_(app),
+  rcmsStateNotifier_
   (
     app->getApplicationLogger(),
     app->getApplicationDescriptor(),
     app->getApplicationContext()
   ),
-  _reasonForFailed(""),
-  _stateName("Halted")
+  reasonForFailed_(""),
+  stateName_("Halted")
   {
     std::ostringstream oss;
     oss << app->getApplicationDescriptor()->getClassName()
       << app->getApplicationDescriptor()->getInstance();
-    _appNameAndInstance = oss.str();
+    appNameAndInstance_ = oss.str();
 
     xdata::InfoSpace *is = app->getApplicationInfoSpace();
     is->fireItemAvailable("rcmsStateListener",
-      _rcmsStateNotifier.getRcmsStateListenerParameter() );
+      rcmsStateNotifier_.getRcmsStateListenerParameter() );
     is->fireItemAvailable("foundRcmsStateListener",
-      _rcmsStateNotifier.getFoundRcmsStateListenerParameter() );
-    _rcmsStateNotifier.findRcmsStateListener();
-    _rcmsStateNotifier.subscribeToChangesInRcmsStateListener(is);
+      rcmsStateNotifier_.getFoundRcmsStateListenerParameter() );
+    rcmsStateNotifier_.findRcmsStateListener();
+    rcmsStateNotifier_.subscribeToChangesInRcmsStateListener(is);
   
-    is->fireItemAvailable("stateName", &_stateName);
+    is->fireItemAvailable("stateName", &stateName_);
 
     initiate();
 
-    _configuration.reset(new Configuration(
+    configuration_.reset(new Configuration(
         app->getApplicationInfoSpace(), app->getApplicationDescriptor()->getInstance()
       ));
 
-    _registrationCollection.reset( new stor::RegistrationCollection() );
+    registrationCollection_.reset( new stor::RegistrationCollection() );
     
-    _registrationQueue.reset(new stor::RegistrationQueue(
-        _configuration->getQueueConfigurationParams()._registrationQueueSize
+    registrationQueue_.reset(new stor::RegistrationQueue(
+        configuration_->getQueueConfigurationParams().registrationQueueSize_
       ));
     
-    _initMsgCollection.reset(new stor::InitMsgCollection());
+    initMsgCollection_.reset(new stor::InitMsgCollection());
 
-    _statisticsReporter.reset(new StatisticsReporter(app,
-        _configuration->getQueueConfigurationParams()));
+    statisticsReporter_.reset(new StatisticsReporter(app,
+        configuration_->getQueueConfigurationParams()));
 
-    _eventQueueCollection.reset(new EventQueueCollection(
-        _statisticsReporter->getEventConsumerMonitorCollection()));
+    eventQueueCollection_.reset(new EventQueueCollection(
+        statisticsReporter_->getEventConsumerMonitorCollection()));
     
-    _dqmEventQueueCollection.reset(new stor::DQMEventQueueCollection(
-        _statisticsReporter->getDQMConsumerMonitorCollection()));
+    dqmEventQueueCollection_.reset(new stor::DQMEventQueueCollection(
+        statisticsReporter_->getDQMConsumerMonitorCollection()));
     
-    _dataManager.reset(new DataManager(this));
+    dataManager_.reset(new DataManager(this));
   }
   
   
   std::string StateMachine::processEvent(const boost::statechart::event_base& event)
   {
-    boost::mutex::scoped_lock sl(_eventMutex);
+    boost::mutex::scoped_lock sl(eventMutex_);
     process_event(event);
     return state_cast<const StateName&>().stateName();
   }
@@ -82,33 +82,33 @@ namespace smproxy
   
   void StateMachine::setExternallyVisibleStateName(const std::string& stateName)
   {
-    _stateName = stateName;
-    _rcmsStateNotifier.stateChanged(stateName,
-      _appNameAndInstance + " has reached target state " +
+    stateName_ = stateName;
+    rcmsStateNotifier_.stateChanged(stateName,
+      appNameAndInstance_ + " has reached target state " +
       stateName);
   }
   
   
   void StateMachine::failEvent(const Fail& evt)
   {
-    _stateName = "Failed";
-    _reasonForFailed = evt.getTraceback();
+    stateName_ = "Failed";
+    reasonForFailed_ = evt.getTraceback();
     
-    LOG4CPLUS_FATAL(_app->getApplicationLogger(),
-      "Failed: " << evt.getReason() << ". " << _reasonForFailed);
+    LOG4CPLUS_FATAL(app_->getApplicationLogger(),
+      "Failed: " << evt.getReason() << ". " << reasonForFailed_);
     
-    _rcmsStateNotifier.stateChanged(_stateName, evt.getReason());
+    rcmsStateNotifier_.stateChanged(stateName_, evt.getReason());
     
-    _app->notifyQualified("fatal", evt.getException());
+    app_->notifyQualified("fatal", evt.getException());
   }
   
   
   void StateMachine::unconsumed_event(const boost::statechart::event_base& evt)
   {
-    LOG4CPLUS_ERROR(_app->getApplicationLogger(),
+    LOG4CPLUS_ERROR(app_->getApplicationLogger(),
       "The " << typeid(evt).name()
       << " event is not supported from the "
-      << _stateName.toString() << " state!");
+      << stateName_.toString() << " state!");
   }
   
   
@@ -117,7 +117,7 @@ namespace smproxy
     std::string errorMsg = "Failed to update configuration parameters";
     try
     {
-      _configuration->updateAllParams();
+      configuration_->updateAllParams();
     }
     catch(xcept::Exception &e)
     {
@@ -148,45 +148,45 @@ namespace smproxy
   void StateMachine::setQueueSizes()
   {
     QueueConfigurationParams queueParams =
-      _configuration->getQueueConfigurationParams();
-    _registrationQueue->
-      set_capacity(queueParams._registrationQueueSize);
+      configuration_->getQueueConfigurationParams();
+    registrationQueue_->
+      set_capacity(queueParams.registrationQueueSize_);
   }
   
   
   void StateMachine::clearInitMsgCollection()
   {
-    _initMsgCollection->clear();
+    initMsgCollection_->clear();
   }
   
   
   void StateMachine::clearConsumerRegistrations()
   {
-    _registrationCollection->clearRegistrations();
-    _eventQueueCollection->removeQueues();
-    _dqmEventQueueCollection->removeQueues();
+    registrationCollection_->clearRegistrations();
+    eventQueueCollection_->removeQueues();
+    dqmEventQueueCollection_->removeQueues();
   }
   
   
   void StateMachine::enableConsumerRegistration()
   {
-    _dataManager->start(_configuration->getDataRetrieverParams());
-    _registrationCollection->enableConsumerRegistration();
+    dataManager_->start(configuration_->getDataRetrieverParams());
+    registrationCollection_->enableConsumerRegistration();
   }
  
   
   void StateMachine::disableConsumerRegistration()
   {
-    _registrationCollection->disableConsumerRegistration();
-    _dataManager->stop();
+    registrationCollection_->disableConsumerRegistration();
+    dataManager_->stop();
   }
  
   
   void StateMachine::clearQueues()
   {
-    _registrationQueue->clear();
-    _eventQueueCollection->clearQueues();
-    _dqmEventQueueCollection->clearQueues();
+    registrationQueue_->clear();
+    eventQueueCollection_->clearQueues();
+    dqmEventQueueCollection_->clearQueues();
   }
   
   

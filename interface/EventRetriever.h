@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.14 2011/02/27 13:58:12 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.15 2011/02/27 18:53:09 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -34,8 +34,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.14 $
-   * $Date: 2011/02/27 13:58:12 $
+   * $Revision: 1.1.2.15 $
+   * $Date: 2011/02/27 18:53:09 $
    */
 
   template<class RegInfo, class QueueCollectionPtr> 
@@ -67,13 +67,13 @@ namespace smproxy {
      * Return the list of QueueIDs attached to the EventRetriever
      */
     const stor::QueueIDs& getQueueIDs() const
-    { return _queueIDs; }
+    { return queueIDs_; }
 
     /**
      * Return the number of active connections to SMs
      */
     size_t getConnectedSMCount() const
-    { return _eventServers.size(); }
+    { return eventServers_.size(); }
 
  
   private:
@@ -97,36 +97,36 @@ namespace smproxy {
     EventRetriever(EventRetriever const&);
     EventRetriever& operator=(EventRetriever const&);
 
-    StateMachine* _stateMachine;
-    const DataRetrieverParams _dataRetrieverParams;
-    DataRetrieverMonitorCollection& _dataRetrieverMonitorCollection;
+    StateMachine* stateMachine_;
+    const DataRetrieverParams dataRetrieverParams_;
+    DataRetrieverMonitorCollection& dataRetrieverMonitorCollection_;
 
-    stor::utils::time_point_t _nextRequestTime;
-    stor::utils::duration_t _minEventRequestInterval;
+    stor::utils::time_point_t nextRequestTime_;
+    stor::utils::duration_t minEventRequestInterval_;
 
-    boost::scoped_ptr<boost::thread> _thread;
-    static size_t _retrieverCount;
-    size_t _instance;
+    boost::scoped_ptr<boost::thread> thread_;
+    static size_t retrieverCount_;
+    size_t instance_;
 
     typedef stor::EventServerProxy<RegInfo> EventServer;
     typedef boost::shared_ptr<EventServer> EventServerPtr;
     typedef std::map<ConnectionID, EventServerPtr> EventServers;
-    EventServers _eventServers;
-    typename EventServers::iterator _nextSMtoUse;
+    EventServers eventServers_;
+    typename EventServers::iterator nextSMtoUse_;
 
     typedef std::vector<ConnectionID> ConnectionIDs;
-    ConnectionIDs _connectionIDs;
-    mutable boost::mutex _connectionIDsLock;
+    ConnectionIDs connectionIDs_;
+    mutable boost::mutex connectionIDsLock_;
 
-    stor::utils::time_point_t _nextReconnectTry;
+    stor::utils::time_point_t nextReconnectTry_;
 
-    stor::QueueIDs _queueIDs;
-    mutable boost::mutex _queueIDsLock;
+    stor::QueueIDs queueIDs_;
+    mutable boost::mutex queueIDsLock_;
 
     stor::DQMEventStore<DQMEventMsg,
                         EventRetriever<RegInfo,QueueCollectionPtr>,
                         StateMachine
-                        > _dqmEventStore;
+                        > dqmEventStore_;
   
   };
   

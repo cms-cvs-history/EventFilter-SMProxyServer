@@ -1,4 +1,4 @@
-// $Id: DataManager.h,v 1.1.2.7 2011/02/11 12:13:44 mommsen Exp $
+// $Id: DataManager.h,v 1.1.2.8 2011/02/26 09:17:26 mommsen Exp $
 /// @file: DataManager.h 
 
 #ifndef EventFilter_SMProxyServer_DataManager_h
@@ -29,8 +29,8 @@ namespace smproxy {
    * Manages the data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.7 $
-   * $Date: 2011/02/11 12:13:44 $
+   * $Revision: 1.1.2.8 $
+   * $Date: 2011/02/26 09:17:26 $
    */
   
   class DataManager
@@ -81,26 +81,26 @@ namespace smproxy {
     void watchDog();
     void checkForStaleConsumers();
 
-    StateMachine* _stateMachine;
-    stor::RegistrationQueuePtr _registrationQueue;
-    DataRetrieverParams _dataRetrieverParams;
+    StateMachine* stateMachine_;
+    stor::RegistrationQueuePtr registrationQueue_;
+    DataRetrieverParams dataRetrieverParams_;
 
-    boost::scoped_ptr<boost::thread> _thread;
-    boost::scoped_ptr<boost::thread> _watchDogThread;
+    boost::scoped_ptr<boost::thread> thread_;
+    boost::scoped_ptr<boost::thread> watchDogThread_;
 
     typedef EventRetriever<stor::EventConsumerRegistrationInfo,
                            EventQueueCollectionPtr> DataEventRetriever;
     typedef boost::shared_ptr<DataEventRetriever> DataEventRetrieverPtr;
     typedef std::map<stor::EventConsRegPtr, DataEventRetrieverPtr,
                      stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo> > DataEventRetrieverMap;
-    DataEventRetrieverMap _dataEventRetrievers;
+    DataEventRetrieverMap dataEventRetrievers_;
 
     typedef EventRetriever<stor::DQMEventConsumerRegistrationInfo,
                            stor::DQMEventQueueCollectionPtr> DQMEventRetriever;
     typedef boost::shared_ptr<DQMEventRetriever> DQMEventRetrieverPtr;
     typedef std::map<stor::DQMEventConsRegPtr, DQMEventRetrieverPtr,
                      stor::utils::ptr_comp<stor::DQMEventConsumerRegistrationInfo> > DQMEventRetrieverMap;
-    DQMEventRetrieverMap _dqmEventRetrievers;
+    DQMEventRetrieverMap dqmEventRetrievers_;
 
   };
 
