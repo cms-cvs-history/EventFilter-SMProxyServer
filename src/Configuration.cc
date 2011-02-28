@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.9 2011/02/26 09:17:26 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.10 2011/02/27 13:58:51 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -105,7 +105,7 @@ namespace smproxy
 
   void Configuration::setDQMProcessingDefaults()
   {
-    _dqmProcessingParamCopy._collateDQM = false;
+    _dqmProcessingParamCopy._collateDQM = true;
     _dqmProcessingParamCopy._readyTimeDQM = boost::posix_time::seconds(120);
     _dqmProcessingParamCopy._useCompressionDQM = true;
     _dqmProcessingParamCopy._compressionLevelDQM = 1;
@@ -115,7 +115,7 @@ namespace smproxy
   {
     _dqmArchivingParamCopy._archiveDQM = false;
     _dqmArchivingParamCopy._filePrefixDQM = "/tmp/DQM";
-    _dqmArchivingParamCopy._archiveIntervalDQM = 0;
+    _dqmArchivingParamCopy._archiveIntervalDQM = 1;
   }
 
   void Configuration::setQueueConfigurationDefaults()
