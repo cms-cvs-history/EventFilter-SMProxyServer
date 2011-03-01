@@ -1,4 +1,4 @@
-// $Id: SMPSWebPageHelper.cc,v 1.1.2.12 2011/02/28 11:38:08 mommsen Exp $
+// $Id: SMPSWebPageHelper.cc,v 1.1.2.13 2011/02/28 18:22:34 mommsen Exp $
 /// @file: SMPSWebPageHelper.cc
 
 #include "EventFilter/SMProxyServer/interface/SMPSWebPageHelper.h"
@@ -627,12 +627,12 @@ namespace smproxy
 
     // Max request rate
     tableDiv = maker.addNode("td", tableRow, tableValueAttr_);
-    const stor::utils::duration_t interval =
+    const stor::utils::Duration_t interval =
       stats.regPtr->minEventRequestInterval();
     if ( interval.is_not_a_date_time() )
       maker.addText(tableDiv, "unlimited");
     else
-      maker.addDouble(tableDiv, 1 / stor::utils::duration_to_seconds(interval), 1);
+      maker.addDouble(tableDiv, 1 / stor::utils::durationToSeconds(interval), 1);
 
     // Event rate
     tableDiv = maker.addNode("td", tableRow, tableValueAttr_);

@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.11 2011/02/28 14:34:25 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.12 2011/02/28 18:22:34 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -202,7 +202,7 @@ namespace smproxy
     // copy the initial defaults to the xdata variables
     registrationQueueSize_ = queueConfigParamCopy_.registrationQueueSize_;
     monitoringSleepSec_ =
-      stor::utils::duration_to_seconds(queueConfigParamCopy_.monitoringSleepSec_);
+      stor::utils::durationToSeconds(queueConfigParamCopy_.monitoringSleepSec_);
     
     // bind the local xdata variables to the infospace
     infoSpace->fireItemAvailable("registrationQueueSize", &registrationQueueSize_);
@@ -263,7 +263,7 @@ namespace smproxy
   {
     queueConfigParamCopy_.registrationQueueSize_ = registrationQueueSize_;
     queueConfigParamCopy_.monitoringSleepSec_ =
-      stor::utils::seconds_to_duration(monitoringSleepSec_);
+      stor::utils::secondsToDuration(monitoringSleepSec_);
   }
 
   void Configuration::actionPerformed(xdata::Event& ispaceEvent)

@@ -1,4 +1,4 @@
-// $Id: DataManager.h,v 1.1.2.8 2011/02/26 09:17:26 mommsen Exp $
+// $Id: DataManager.h,v 1.1.2.9 2011/02/28 18:22:34 mommsen Exp $
 /// @file: DataManager.h 
 
 #ifndef EventFilter_SMProxyServer_DataManager_h
@@ -29,8 +29,8 @@ namespace smproxy {
    * Manages the data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.8 $
-   * $Date: 2011/02/26 09:17:26 $
+   * $Revision: 1.1.2.9 $
+   * $Date: 2011/02/28 18:22:34 $
    */
   
   class DataManager
@@ -92,14 +92,14 @@ namespace smproxy {
                            EventQueueCollectionPtr> DataEventRetriever;
     typedef boost::shared_ptr<DataEventRetriever> DataEventRetrieverPtr;
     typedef std::map<stor::EventConsRegPtr, DataEventRetrieverPtr,
-                     stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo> > DataEventRetrieverMap;
+                     stor::utils::ptrComp<stor::EventConsumerRegistrationInfo> > DataEventRetrieverMap;
     DataEventRetrieverMap dataEventRetrievers_;
 
     typedef EventRetriever<stor::DQMEventConsumerRegistrationInfo,
                            stor::DQMEventQueueCollectionPtr> DQMEventRetriever;
     typedef boost::shared_ptr<DQMEventRetriever> DQMEventRetrieverPtr;
     typedef std::map<stor::DQMEventConsRegPtr, DQMEventRetrieverPtr,
-                     stor::utils::ptr_comp<stor::DQMEventConsumerRegistrationInfo> > DQMEventRetrieverMap;
+                     stor::utils::ptrComp<stor::DQMEventConsumerRegistrationInfo> > DQMEventRetrieverMap;
     DQMEventRetrieverMap dqmEventRetrievers_;
 
   };

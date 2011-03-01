@@ -1,4 +1,4 @@
-// $Id: StatisticsReporter.h,v 1.1.2.3 2011/01/26 16:06:54 mommsen Exp $
+// $Id: StatisticsReporter.h,v 1.1.2.4 2011/02/28 18:22:34 mommsen Exp $
 /// @file: StatisticsReporter.h 
 
 #ifndef EventFilter_SMProxyServer_StatisticsReporter_h
@@ -35,8 +35,8 @@ namespace smproxy {
    * statistics for all MonitorCollections.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.3 $
-   * $Date: 2011/01/26 16:06:54 $
+   * $Revision: 1.1.2.4 $
+   * $Date: 2011/02/28 18:22:34 $
    */
   
   class StatisticsReporter : public toolbox::lang::Class, public xdata::ActionListener
@@ -116,8 +116,8 @@ namespace smproxy {
 
     xdaq::Application* app_;
     stor::AlarmHandlerPtr alarmHandler_;
-    stor::utils::duration_t monitoringSleepSec_;
-    stor::utils::time_point_t lastMonitorAction_;
+    stor::utils::Duration_t monitoringSleepSec_;
+    stor::utils::TimePoint_t lastMonitorAction_;
 
     DataRetrieverMonitorCollection dataRetrieverMonCollection_;
     stor::DQMEventMonitorCollection dqmEventMonCollection_;

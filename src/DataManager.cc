@@ -1,4 +1,4 @@
-// $Id: DataManager.cc,v 1.1.2.11 2011/02/27 18:53:10 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.12 2011/02/28 18:22:34 mommsen Exp $
 /// @file: DataManager.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -45,7 +45,7 @@ namespace smproxy
   void DataManager::stop()
   {
     // enqueue a dummy RegistrationInfoBase to tell the thread to stop
-    registrationQueue_->enq_wait( stor::RegPtr() );
+    registrationQueue_->enqWait( stor::RegPtr() );
     thread_->join();
 
     edm::shutdown_flag = true;
@@ -120,7 +120,7 @@ namespace smproxy
 
     do
     {
-      registrationQueue_->deq_wait(regPtr);
+      registrationQueue_->deqWait(regPtr);
 
       if ( ! (addEventConsumer(regPtr) || addDQMEventConsumer(regPtr)) )
       {
@@ -139,7 +139,10 @@ namespace smproxy
     if ( ! eventConsumer ) return false;
 
     DataEventRetrieverMap::iterator pos = dataEventRetrievers_.lower_bound(eventConsumer);
-    if ( pos == dataEventRetrievers_.end() || (dataEventRetrievers_.key_comp()(eventConsumer, pos->first)) )
+    if (
+      pos == dataEventRetrievers_.end() ||
+      (dataEventRetrievers_.key_comp()(eventConsumer, pos->first))
+    )
     {
       // no retriever found for this event requests
       DataEventRetrieverPtr dataEventRetriever(
@@ -164,8 +167,11 @@ namespace smproxy
     
     if ( ! dqmEventConsumer ) return false;
 
-    DQMEventRetrieverMap::iterator pos = dqmEventRetrievers_.lower_bound(dqmEventConsumer);
-    if ( pos == dqmEventRetrievers_.end() || (dqmEventRetrievers_.key_comp()(dqmEventConsumer, pos->first)) )
+    DQMEventRetrieverMap::iterator pos =
+      dqmEventRetrievers_.lower_bound(dqmEventConsumer);
+    if (
+      pos == dqmEventRetrievers_.end() ||
+      (dqmEventRetrievers_.key_comp()(dqmEventConsumer, pos->first)) )
     {
       // no retriever found for this DQM event requests
       DQMEventRetrieverPtr dqmEventRetriever(
@@ -223,7 +229,7 @@ namespace smproxy
     while (true)
     {
       boost::this_thread::sleep(boost::posix_time::seconds(1));
-      stor::utils::time_point_t now = stor::utils::getCurrentTime();
+      stor::utils::TimePoint_t now = stor::utils::getCurrentTime();
       eventQueueCollection->clearStaleQueues(now);
       dqmEventQueueCollection->clearStaleQueues(now);
     }

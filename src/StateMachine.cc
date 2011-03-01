@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.10 2011/02/27 18:53:10 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.11 2011/02/28 18:22:34 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -150,7 +150,7 @@ namespace smproxy
     QueueConfigurationParams queueParams =
       configuration_->getQueueConfigurationParams();
     registrationQueue_->
-      set_capacity(queueParams.registrationQueueSize_);
+      setCapacity(queueParams.registrationQueueSize_);
   }
   
   

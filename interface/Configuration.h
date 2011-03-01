@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.11 2011/02/27 13:57:28 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.12 2011/02/28 18:22:34 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -33,7 +33,7 @@ namespace smproxy
     uint32_t connectTrySleepTime_;
     uint32_t headerRetryInterval_;
     uint32_t retryInterval_;
-    stor::utils::duration_t sleepTimeIfIdle_;
+    stor::utils::Duration_t sleepTimeIfIdle_;
 
     // not mapped to infospace params
     uint32_t smpsInstance_;
@@ -58,7 +58,7 @@ namespace smproxy
   struct QueueConfigurationParams
   {
     uint32_t registrationQueueSize_;
-    stor::utils::duration_t monitoringSleepSec_;
+    stor::utils::Duration_t monitoringSleepSec_;
   };
 
   /**
@@ -67,8 +67,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.11 $
-   * $Date: 2011/02/27 13:57:28 $
+   * $Revision: 1.1.2.12 $
+   * $Date: 2011/02/28 18:22:34 $
    */
 
   class Configuration : public xdata::ActionListener

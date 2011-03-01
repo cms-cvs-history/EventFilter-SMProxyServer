@@ -1,4 +1,4 @@
-// $Id: EventRetriever.icc,v 1.1.2.3 2011/02/27 18:53:10 mommsen Exp $
+// $Id: EventRetriever.icc,v 1.1.2.4 2011/02/28 18:22:34 mommsen Exp $
 /// @file: EventRetriever.icc
 
 #include "EventFilter/SMProxyServer/interface/EventMsg.h"
@@ -67,7 +67,7 @@ namespace smproxy
 
     nextRequestTime_ = stor::utils::getCurrentTime();
     nextReconnectTry_ = nextRequestTime_ +
-      stor::utils::seconds_to_duration(dataRetrieverParams_.connectTrySleepTime_);
+      stor::utils::secondsToDuration(dataRetrieverParams_.connectTrySleepTime_);
     queueIDs_.push_back(consumer->queueId());
 
     dqmEventStore_.setParameters(stateMachine->getConfiguration()->getDQMProcessingParams());
@@ -91,7 +91,7 @@ namespace smproxy
   EventRetriever<RegInfo,QueueCollectionPtr>::
   addConsumer(const RegInfoPtr consumer)
   {
-    const stor::utils::duration_t& interval = consumer->minEventRequestInterval();
+    const stor::utils::Duration_t& interval = consumer->minEventRequestInterval();
     if ( adjustMinEventRequestInterval(interval) )
       updateConsumersSetting(interval); 
 
@@ -103,7 +103,7 @@ namespace smproxy
   template<class RegInfo, class QueueCollectionPtr>
   bool
   EventRetriever<RegInfo,QueueCollectionPtr>::
-  adjustMinEventRequestInterval(const stor::utils::duration_t& newInterval)
+  adjustMinEventRequestInterval(const stor::utils::Duration_t& newInterval)
   {
     if ( minEventRequestInterval_.is_not_a_date_time() )
     {
@@ -136,7 +136,7 @@ namespace smproxy
   template<class RegInfo, class QueueCollectionPtr>
   void
   EventRetriever<RegInfo,QueueCollectionPtr>::
-  updateConsumersSetting(const stor::utils::duration_t& newInterval)
+  updateConsumersSetting(const stor::utils::Duration_t& newInterval)
   {
     boost::mutex::scoped_lock sl(connectionIDsLock_);
 
@@ -209,7 +209,7 @@ namespace smproxy
   anyActiveConsumers(QueueCollectionPtr queueCollection) const
   {
     boost::mutex::scoped_lock sl(queueIDsLock_);
-    stor::utils::time_point_t now = stor::utils::getCurrentTime();
+    stor::utils::TimePoint_t now = stor::utils::getCurrentTime();
     
     for ( stor::QueueIDs::const_iterator it = queueIDs_.begin(), itEnd = queueIDs_.end();
           it != itEnd; ++it)
@@ -385,11 +385,11 @@ namespace smproxy
   EventRetriever<RegInfo,QueueCollectionPtr>::
   tryToReconnect()
   {
-    stor::utils::time_point_t now = stor::utils::getCurrentTime();
+    stor::utils::TimePoint_t now = stor::utils::getCurrentTime();
     if ( nextReconnectTry_ > now ) return false;
 
     nextReconnectTry_ = now +
-      stor::utils::seconds_to_duration(dataRetrieverParams_.connectTrySleepTime_);
+      stor::utils::secondsToDuration(dataRetrieverParams_.connectTrySleepTime_);
 
     bool success(false);
     boost::mutex::scoped_lock sl(connectionIDsLock_);

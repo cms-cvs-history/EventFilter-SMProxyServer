@@ -1,4 +1,4 @@
-// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.6 2011/02/26 09:17:26 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.h,v 1.1.2.7 2011/02/28 18:22:34 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.h 
 
 #ifndef EventFilter_SMProxyServer_DataRetrieverMonitorCollection_h
@@ -26,8 +26,8 @@ namespace smproxy {
    * A collection of MonitoredQuantities related to data retrieval
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.6 $
-   * $Date: 2011/02/26 09:17:26 $
+   * $Revision: 1.1.2.7 $
+   * $Date: 2011/02/28 18:22:34 $
    */
   
   class DataRetrieverMonitorCollection : public stor::MonitorCollection
@@ -60,7 +60,7 @@ namespace smproxy {
     typedef std::vector<EventTypeStats> EventTypeStatList;
     
     
-    explicit DataRetrieverMonitorCollection(const stor::utils::duration_t& updateInterval);
+    explicit DataRetrieverMonitorCollection(const stor::utils::Duration_t& updateInterval);
     
     /**
      * Add a new  server connection.
@@ -114,7 +114,7 @@ namespace smproxy {
       DataRetrieverMQ
       (
         stor::RegPtr,
-        const stor::utils::duration_t& updateInterval
+        const stor::utils::Duration_t& updateInterval
       );
     };
 
@@ -122,7 +122,7 @@ namespace smproxy {
     DataRetrieverMonitorCollection(DataRetrieverMonitorCollection const&);
     DataRetrieverMonitorCollection& operator=(DataRetrieverMonitorCollection const&);
 
-    const stor::utils::duration_t updateInterval_;
+    const stor::utils::Duration_t updateInterval_;
     typedef boost::shared_ptr<DataRetrieverMQ> DataRetrieverMQPtr;
     typedef std::map<ConnectionID, DataRetrieverMQPtr> RetrieverMqMap;
     RetrieverMqMap retrieverMqMap_;
@@ -142,7 +142,7 @@ namespace smproxy {
     {
     public:
 
-      EventTypeMqMap(const stor::utils::duration_t& updateInterval)
+      EventTypeMqMap(const stor::utils::Duration_t& updateInterval)
       : updateInterval_(updateInterval) {}
 
       bool insert(const stor::RegPtr);
@@ -159,16 +159,16 @@ namespace smproxy {
       bool addSample(const stor::DQMEventConsRegPtr, const double& sizeKB);
       
       typedef std::map<stor::EventConsRegPtr, stor::MonitoredQuantityPtr,
-                       stor::utils::ptr_comp<stor::EventConsumerRegistrationInfo>
+                       stor::utils::ptrComp<stor::EventConsumerRegistrationInfo>
                        > EventMap;
       EventMap eventMap_;
       
       typedef std::map<stor::DQMEventConsRegPtr, stor::MonitoredQuantityPtr,
-                     stor::utils::ptr_comp<stor::DQMEventConsumerRegistrationInfo>
+                     stor::utils::ptrComp<stor::DQMEventConsumerRegistrationInfo>
                      > DQMEventMap;
       DQMEventMap dqmEventMap_;
       
-      const stor::utils::duration_t updateInterval_;
+      const stor::utils::Duration_t updateInterval_;
     };
 
     EventTypeMqMap eventTypeMqMap_;

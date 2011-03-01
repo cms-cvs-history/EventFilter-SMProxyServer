@@ -1,4 +1,4 @@
-// $Id: StatisticsReporter.cc,v 1.1.2.2 2011/01/26 16:06:54 mommsen Exp $
+// $Id: StatisticsReporter.cc,v 1.1.2.3 2011/02/28 18:22:34 mommsen Exp $
 /// @file: StatisticsReporter.cc
 
 #include <sstream>
@@ -212,7 +212,7 @@ namespace smproxy {
   
   void StatisticsReporter::calculateStatistics()
   {
-    const stor::utils::time_point_t now = stor::utils::getCurrentTime();
+    const stor::utils::TimePoint_t now = stor::utils::getCurrentTime();
     
     dataRetrieverMonCollection_.calculateStatistics(now);
     dqmEventMonCollection_.calculateStatistics(now);
@@ -268,7 +268,7 @@ namespace smproxy {
   
   void StatisticsReporter::reset()
   {
-    const stor::utils::time_point_t now = stor::utils::getCurrentTime();
+    const stor::utils::TimePoint_t now = stor::utils::getCurrentTime();
     
     dataRetrieverMonCollection_.reset(now);
     dqmEventMonCollection_.reset(now);

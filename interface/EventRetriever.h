@@ -1,4 +1,4 @@
-// $Id: EventRetriever.h,v 1.1.2.15 2011/02/27 18:53:09 mommsen Exp $
+// $Id: EventRetriever.h,v 1.1.2.16 2011/02/28 18:22:34 mommsen Exp $
 /// @file: EventRetriever.h 
 
 #ifndef EventFilter_SMProxyServer_EventRetriever_h
@@ -34,8 +34,8 @@ namespace smproxy {
    * Retrieve events from the event server
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.15 $
-   * $Date: 2011/02/27 18:53:09 $
+   * $Revision: 1.1.2.16 $
+   * $Date: 2011/02/28 18:22:34 $
    */
 
   template<class RegInfo, class QueueCollectionPtr> 
@@ -87,8 +87,8 @@ namespace smproxy {
     bool tryToReconnect();
     void getInitMsg();
     bool getNextEvent(stor::CurlInterface::Content&);
-    bool adjustMinEventRequestInterval(const stor::utils::duration_t&);
-    void updateConsumersSetting(const stor::utils::duration_t&);
+    bool adjustMinEventRequestInterval(const stor::utils::Duration_t&);
+    void updateConsumersSetting(const stor::utils::Duration_t&);
     bool anyActiveConsumers(QueueCollectionPtr) const;
     void disconnectFromCurrentSM();
     void processCompletedTopLevelFolders();
@@ -101,8 +101,8 @@ namespace smproxy {
     const DataRetrieverParams dataRetrieverParams_;
     DataRetrieverMonitorCollection& dataRetrieverMonitorCollection_;
 
-    stor::utils::time_point_t nextRequestTime_;
-    stor::utils::duration_t minEventRequestInterval_;
+    stor::utils::TimePoint_t nextRequestTime_;
+    stor::utils::Duration_t minEventRequestInterval_;
 
     boost::scoped_ptr<boost::thread> thread_;
     static size_t retrieverCount_;
@@ -118,7 +118,7 @@ namespace smproxy {
     ConnectionIDs connectionIDs_;
     mutable boost::mutex connectionIDsLock_;
 
-    stor::utils::time_point_t nextReconnectTry_;
+    stor::utils::TimePoint_t nextReconnectTry_;
 
     stor::QueueIDs queueIDs_;
     mutable boost::mutex queueIDsLock_;

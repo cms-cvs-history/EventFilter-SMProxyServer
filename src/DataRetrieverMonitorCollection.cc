@@ -1,4 +1,4 @@
-// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.6 2011/02/26 09:17:26 mommsen Exp $
+// $Id: DataRetrieverMonitorCollection.cc,v 1.1.2.7 2011/02/28 18:22:34 mommsen Exp $
 /// @file: DataRetrieverMonitorCollection.cc
 
 #include <string>
@@ -15,7 +15,7 @@ namespace smproxy {
   
   DataRetrieverMonitorCollection::DataRetrieverMonitorCollection
   (
-    const stor::utils::duration_t& updateInterval
+    const stor::utils::Duration_t& updateInterval
   ) :
   MonitorCollection(updateInterval),
   totalSize_(updateInterval, boost::posix_time::seconds(60)),
@@ -337,7 +337,7 @@ namespace smproxy {
   DataRetrieverMonitorCollection::DataRetrieverMQ::DataRetrieverMQ
   (
     const stor::RegPtr regPtr,
-    const stor::utils::duration_t& updateInterval
+    const stor::utils::Duration_t& updateInterval
   ):
   regPtr_(regPtr),
   connectionStatus_(UNKNOWN),
