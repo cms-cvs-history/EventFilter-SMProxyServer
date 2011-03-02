@@ -1,4 +1,4 @@
-// $Id: DQMArchiver.cc,v 1.1.2.13 2011/03/01 08:32:15 mommsen Exp $
+// $Id: DQMArchiver.cc,v 1.1.2.1 2011/03/02 11:00:44 mommsen Exp $
 /// @file: DQMArchiver.cc
 
 #include "DQMServices/Core/interface/DQMStore.h"
@@ -100,7 +100,7 @@ namespace smproxy
 
     if (
       dqmArchivingParams_.archiveIntervalDQM_ > 0 &&
-      (view.updateNumber() % dqmArchivingParams_.archiveIntervalDQM_) == 0
+      ((view.updateNumber()+1) % dqmArchivingParams_.archiveIntervalDQM_) == 0
     )
     {
       writeDQMEventToFile(view, false);
