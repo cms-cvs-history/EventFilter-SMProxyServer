@@ -1,4 +1,4 @@
-// $Id: StateMachine.cc,v 1.1.2.11 2011/02/28 18:22:34 mommsen Exp $
+// $Id: StateMachine.cc,v 1.1.2.12 2011/03/01 08:32:15 mommsen Exp $
 /// @file: StateMachine.cc
 
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
@@ -170,8 +170,8 @@ namespace smproxy
   
   void StateMachine::enableConsumerRegistration()
   {
-    dataManager_->start(configuration_->getDataRetrieverParams());
     registrationCollection_->enableConsumerRegistration();
+    dataManager_->start(configuration_->getDataRetrieverParams());
   }
  
   

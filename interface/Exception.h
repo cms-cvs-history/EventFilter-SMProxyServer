@@ -1,4 +1,4 @@
-// $Id: Exception.h,v 1.1.2.3 2011/01/24 12:43:17 mommsen Exp $
+// $Id: Exception.h,v 1.1.2.4 2011/01/26 16:06:54 mommsen Exp $
 /// @file: Exception.h 
 
 #ifndef EventFilter_SMProxyServer_Exception_h
@@ -13,8 +13,8 @@ namespace smproxy {
      List of exceptions thrown by the SMProxyServer
 
      $Author: mommsen $
-     $Revision: 1.1.2.3 $
-     $Date: 2011/01/24 12:43:17 $
+     $Revision: 1.1.2.4 $
+     $Date: 2011/01/26 16:06:54 $
   */
 }
 
@@ -62,6 +62,11 @@ XCEPT_DEFINE_EXCEPTION(smproxy, ConsumerRegistration)
  * DQM consumer registration exception
  */
 XCEPT_DEFINE_EXCEPTION(smproxy, DQMConsumerRegistration)
+
+/**
+ * DQM archiving exception
+ */
+XCEPT_DEFINE_EXCEPTION(smproxy, DQMArchival)
 
 /**
  * State transition error

@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.44.2.6 2011/02/27 18:53:10 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.2.7 2011/02/28 18:22:34 mommsen Exp $
 /// @file: SMProxyServer.cc
 
 #include "EventFilter/SMProxyServer/interface/Exception.h"
@@ -40,13 +40,13 @@ SMProxyServer::SMProxyServer(xdaq::ApplicationStub * s) :
   {
     errorMsg += e.what();
     LOG4CPLUS_FATAL( getApplicationLogger(), e.what() );
-    XCEPT_RAISE( stor::exception::Exception, e.what() );
+    XCEPT_RAISE( exception::Exception, e.what() );
   }
   catch(...)
   {
     errorMsg += "unknown exception";
     LOG4CPLUS_FATAL( getApplicationLogger(), errorMsg );
-    XCEPT_RAISE( stor::exception::Exception, errorMsg );
+    XCEPT_RAISE( exception::Exception, errorMsg );
   }
 
   startWorkerThreads();

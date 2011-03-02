@@ -1,4 +1,4 @@
-// $Id: Configuration.cc,v 1.1.2.12 2011/02/28 18:22:34 mommsen Exp $
+// $Id: Configuration.cc,v 1.1.2.13 2011/03/01 08:32:15 mommsen Exp $
 /// @file: Configuration.cc
 
 #include "EventFilter/SMProxyServer/interface/Configuration.h"
@@ -114,8 +114,9 @@ namespace smproxy
   void Configuration::setDQMArchivingDefaults()
   {
     dqmArchivingParamCopy_.archiveDQM_ = false;
+    dqmArchivingParamCopy_.archiveTopLevelFolder_ = "*";
     dqmArchivingParamCopy_.filePrefixDQM_ = "/tmp/DQM";
-    dqmArchivingParamCopy_.archiveIntervalDQM_ = 1;
+    dqmArchivingParamCopy_.archiveIntervalDQM_ = 0;
   }
 
   void Configuration::setQueueConfigurationDefaults()
@@ -187,11 +188,13 @@ namespace smproxy
   {
     // copy the initial defaults to the xdata variables
     archiveDQM_ = dqmArchivingParamCopy_.archiveDQM_;
+    archiveTopLevelFolder_ = dqmArchivingParamCopy_.archiveTopLevelFolder_;
     archiveIntervalDQM_ = dqmArchivingParamCopy_.archiveIntervalDQM_;
     filePrefixDQM_ = dqmArchivingParamCopy_.filePrefixDQM_;
 
     // bind the local xdata variables to the infospace
     infoSpace->fireItemAvailable("archiveDQM", &archiveDQM_);
+    infoSpace->fireItemAvailable("archiveTopLevelFolder", &archiveTopLevelFolder_);
     infoSpace->fireItemAvailable("archiveIntervalDQM", &archiveIntervalDQM_);
     infoSpace->fireItemAvailable("filePrefixDQM", &filePrefixDQM_);
   }
@@ -255,6 +258,7 @@ namespace smproxy
   void Configuration::updateLocalDQMArchivingData()
   {
     dqmArchivingParamCopy_.archiveDQM_ = archiveDQM_;
+    dqmArchivingParamCopy_.archiveTopLevelFolder_ = archiveTopLevelFolder_;
     dqmArchivingParamCopy_.archiveIntervalDQM_ = archiveIntervalDQM_;
     dqmArchivingParamCopy_.filePrefixDQM_ = filePrefixDQM_;
   }

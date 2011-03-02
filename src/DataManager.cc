@@ -1,8 +1,9 @@
-// $Id: DataManager.cc,v 1.1.2.12 2011/02/28 18:22:34 mommsen Exp $
+// $Id: DataManager.cc,v 1.1.2.13 2011/03/01 08:32:15 mommsen Exp $
 /// @file: DataManager.cc
 
-#include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/DataManager.h"
+#include "EventFilter/SMProxyServer/interface/DQMArchiver.h"
+#include "EventFilter/SMProxyServer/interface/Exception.h"
 #include "EventFilter/SMProxyServer/interface/StateMachine.h"
 #include "EventFilter/SMProxyServer/src/EventRetriever.icc"
 #include "FWCore/Utilities/interface/UnixSignalHandlers.h"
@@ -117,6 +118,9 @@ namespace smproxy
   {
     stor::RegPtr regPtr;
     bool process(true);
+
+    DQMArchiver dqmArchiver(stateMachine_);
+    addDQMEventConsumer(dqmArchiver.getRegPtr());
 
     do
     {

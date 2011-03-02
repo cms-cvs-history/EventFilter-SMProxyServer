@@ -1,4 +1,4 @@
-// $Id: Configuration.h,v 1.1.2.12 2011/02/28 18:22:34 mommsen Exp $
+// $Id: Configuration.h,v 1.1.2.13 2011/03/01 08:32:14 mommsen Exp $
 /// @file: Configuration.h 
 
 #ifndef EventFilter_SMProxyServer_Configuration_h
@@ -47,6 +47,7 @@ namespace smproxy
   struct DQMArchivingParams
   {
     bool archiveDQM_;
+    std::string archiveTopLevelFolder_;
     std::string filePrefixDQM_;
     unsigned int archiveIntervalDQM_;
   };
@@ -67,8 +68,8 @@ namespace smproxy
    * only at requested times.
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.12 $
-   * $Date: 2011/02/28 18:22:34 $
+   * $Revision: 1.1.2.13 $
+   * $Date: 2011/03/01 08:32:14 $
    */
 
   class Configuration : public xdata::ActionListener
@@ -181,6 +182,7 @@ namespace smproxy
     xdata::Integer compressionLevelDQM_;
 
     xdata::Boolean archiveDQM_;
+    xdata::String  archiveTopLevelFolder_;
     xdata::String  filePrefixDQM_;
     xdata::Integer archiveIntervalDQM_;  // lumi sections
     
