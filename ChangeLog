@@ -1,3 +1,7 @@
+2011-03-XX Remi Mommsen <Remigius.Mommsen@cern.ch>
+	* tag V02-00-00
+	* Rewrite of SMPS (from SMPSdev_branch)
+
 2010-10-27 William Tanenbaum <wmtan@fnal.gov>
 	* tag V01-10-02
 	* Convert BuildFiles to XML.
