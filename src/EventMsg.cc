@@ -1,4 +1,4 @@
-// $Id: EventMsg.cc,v 1.1.2.4 2011/02/28 18:22:34 mommsen Exp $
+// $Id: EventMsg.cc,v 1.1.2.5 2011/03/08 16:02:04 mommsen Exp $
 /// @file: EventMsg.cc
 
 #include "EventFilter/SMProxyServer/interface/EventMsg.h"
@@ -44,7 +44,7 @@ namespace smproxy
   }
   
   
-  void EventMsg::addDroppedEventsCount(unsigned int count)
+  void EventMsg::setDroppedEventsCount(unsigned int count)
   {
     EventHeader* header = (EventHeader*)dataLocation();
     convert(count,header->droppedEventsCount_);

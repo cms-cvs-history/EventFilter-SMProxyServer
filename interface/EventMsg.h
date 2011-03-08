@@ -1,4 +1,4 @@
-// $Id: EventMsg.h,v 1.1.2.5 2011/02/28 18:22:34 mommsen Exp $
+// $Id: EventMsg.h,v 1.1.2.6 2011/03/08 16:02:04 mommsen Exp $
 /// @file: EventMsg.h 
 
 #ifndef EventFilter_SMProxyServer_EventMsg_h
@@ -17,8 +17,8 @@ namespace smproxy {
    * APIs required for SMPS
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.5 $
-   * $Date: 2011/02/28 18:22:34 $
+   * $Revision: 1.1.2.6 $
+   * $Date: 2011/03/08 16:02:04 $
    */
 
   class EventMsg
@@ -46,7 +46,7 @@ namespace smproxy {
     /**
       Add the number of dropped events to the number found in the EventHeader
      */
-    void addDroppedEventsCount(unsigned int count);
+    void setDroppedEventsCount(unsigned int count);
 
     /**
       Returns the total memory occupied by the event message
