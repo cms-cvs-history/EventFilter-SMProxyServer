@@ -1,4 +1,4 @@
-// $Id: EventMsg.h,v 1.1.2.4 2011/02/27 13:58:12 mommsen Exp $
+// $Id: EventMsg.h,v 1.1.2.5 2011/02/28 18:22:34 mommsen Exp $
 /// @file: EventMsg.h 
 
 #ifndef EventFilter_SMProxyServer_EventMsg_h
@@ -17,8 +17,8 @@ namespace smproxy {
    * APIs required for SMPS
    *
    * $Author: mommsen $
-   * $Revision: 1.1.2.4 $
-   * $Date: 2011/02/27 13:58:12 $
+   * $Revision: 1.1.2.5 $
+   * $Date: 2011/02/28 18:22:34 $
    */
 
   class EventMsg
@@ -37,6 +37,16 @@ namespace smproxy {
       Return the QueueIDs for which the event is tagged
      */
     const stor::QueueIDs& getEventConsumerTags() const;
+
+    /**
+      Return the number of dropped events found in the EventHeader
+     */
+    unsigned int droppedEventsCount() const;
+
+    /**
+      Add the number of dropped events to the number found in the EventHeader
+     */
+    void addDroppedEventsCount(unsigned int count);
 
     /**
       Returns the total memory occupied by the event message
@@ -68,6 +78,7 @@ namespace smproxy {
     typedef std::vector<unsigned char> EventMsgBuffer;
     boost::shared_ptr<EventMsgBuffer> buf_;
     bool faulty_;
+    unsigned int droppedEventsCount_;
 
     stor::QueueIDs queueIDs_;
   };

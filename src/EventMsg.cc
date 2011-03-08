@@ -1,4 +1,4 @@
-// $Id: EventMsg.cc,v 1.1.2.3 2011/02/24 10:59:26 mommsen Exp $
+// $Id: EventMsg.cc,v 1.1.2.4 2011/02/28 18:22:34 mommsen Exp $
 /// @file: EventMsg.cc
 
 #include "EventFilter/SMProxyServer/interface/EventMsg.h"
@@ -8,7 +8,8 @@ namespace smproxy
 {
 
   EventMsg::EventMsg() :
-  faulty_(true)
+  faulty_(true),
+  droppedEventsCount_(0)
   {}
   
   
@@ -21,6 +22,7 @@ namespace smproxy
       eventMsgView.startAddress()+eventMsgView.size(),
       &(*buf_)[0]
     );
+    droppedEventsCount_ = eventMsgView.droppedEventsCount();
   }
   
   
@@ -33,6 +35,19 @@ namespace smproxy
   const stor::QueueIDs& EventMsg::getEventConsumerTags() const
   {
     return queueIDs_;
+  }
+  
+  
+  unsigned int EventMsg::droppedEventsCount() const
+  {
+    return droppedEventsCount_;
+  }
+  
+  
+  void EventMsg::addDroppedEventsCount(unsigned int count)
+  {
+    EventHeader* header = (EventHeader*)dataLocation();
+    convert(count,header->droppedEventsCount_);
   }
   
   
