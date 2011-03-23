@@ -84,6 +84,9 @@ namespace smproxy
   ~EventRetriever()
   {
     stop();
+    
+    boost::mutex::scoped_lock sl(queueIDsLock_);
+    queueIDs_.clear();
   }
   
   
@@ -165,9 +168,6 @@ namespace smproxy
 
     eventServers_.clear();
     connectionIDs_.clear();
-    
-    boost::mutex::scoped_lock sl(queueIDsLock_);
-    queueIDs_.clear();
   }
     
   
