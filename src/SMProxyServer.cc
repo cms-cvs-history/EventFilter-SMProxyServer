@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.44 2010/09/20 15:16:49 mommsen Exp $
+// $Id: SMProxyServer.cc,v 1.44.6.1 2011/03/24 14:02:24 mommsen Exp $
 
 #include <iostream>
 #include <iomanip>
@@ -1647,7 +1647,7 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
         eventSum = 0.0;
         eventRateSum = 0.0;
         dataRateSum = 0.0;
-        for (int idx = 0; idx < initMsgCollection->size(); ++idx) {
+        for (size_t idx = 0; idx < initMsgCollection->size(); ++idx) {
           InitMsgSharedPtr serializedProds = initMsgCollection->getElementAt(idx);
           InitMsgView initView(&(*serializedProds)[0]);
           uint32 outputModuleId = initView.outputModuleId();
@@ -1714,7 +1714,7 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
         eventSum = 0.0;
         eventRateSum = 0.0;
         dataRateSum = 0.0;
-        for (int idx = 0; idx < initMsgCollection->size(); ++idx) {
+        for (size_t idx = 0; idx < initMsgCollection->size(); ++idx) {
           InitMsgSharedPtr serializedProds = initMsgCollection->getElementAt(idx);
           InitMsgView initView(&(*serializedProds)[0]);
           uint32 outputModuleId = initView.outputModuleId();
@@ -1781,7 +1781,7 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
         eventSum = 0.0;
         eventRateSum = 0.0;
         dataRateSum = 0.0;
-        for (int idx = 0; idx < initMsgCollection->size(); ++idx) {
+        for (size_t idx = 0; idx < initMsgCollection->size(); ++idx) {
           InitMsgSharedPtr serializedProds = initMsgCollection->getElementAt(idx);
           InitMsgView initView(&(*serializedProds)[0]);
           uint32 outputModuleId = initView.outputModuleId();
@@ -1848,7 +1848,7 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
         eventSum = 0.0;
         eventRateSum = 0.0;
         dataRateSum = 0.0;
-        for (int idx = 0; idx < initMsgCollection->size(); ++idx) {
+        for (size_t idx = 0; idx < initMsgCollection->size(); ++idx) {
           InitMsgSharedPtr serializedProds = initMsgCollection->getElementAt(idx);
           InitMsgView initView(&(*serializedProds)[0]);
           uint32 outputModuleId = initView.outputModuleId();
@@ -1915,7 +1915,7 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
         eventSum = 0.0;
         eventRateSum = 0.0;
         dataRateSum = 0.0;
-        for (int idx = 0; idx < initMsgCollection->size(); ++idx) {
+        for (size_t idx = 0; idx < initMsgCollection->size(); ++idx) {
           InitMsgSharedPtr serializedProds = initMsgCollection->getElementAt(idx);
           InitMsgView initView(&(*serializedProds)[0]);
           uint32 outputModuleId = initView.outputModuleId();
@@ -1982,7 +1982,7 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
         eventSum = 0.0;
         eventRateSum = 0.0;
         dataRateSum = 0.0;
-        for (int idx = 0; idx < initMsgCollection->size(); ++idx) {
+        for (size_t idx = 0; idx < initMsgCollection->size(); ++idx) {
           InitMsgSharedPtr serializedProds = initMsgCollection->getElementAt(idx);
           InitMsgView initView(&(*serializedProds)[0]);
           uint32 outputModuleId = initView.outputModuleId();
@@ -2676,7 +2676,7 @@ void SMProxyServer::eventServerWebPage(xgi::Input *in, xgi::Output *out)
 	  *out << "</tr>" << std::endl;
 	}
 
-	for (int idx = 0; idx < initMsgCollection->size(); ++idx) {
+	for (size_t idx = 0; idx < initMsgCollection->size(); ++idx) {
 	  InitMsgSharedPtr serializedProds = initMsgCollection->getElementAt(idx);
 	  InitMsgView initView(&(*serializedProds)[0]);
 	  Strings triggerSelectionList;
