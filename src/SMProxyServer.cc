@@ -1,4 +1,4 @@
-// $Id: SMProxyServer.cc,v 1.42 2010/04/13 15:44:48 elmer Exp $
+// $Id: SMProxyServer.cc,v 1.44 2010/09/20 15:16:49 mommsen Exp $
 
 #include <iostream>
 #include <iomanip>
@@ -3145,11 +3145,7 @@ void SMProxyServer::setupFlashList()
 void SMProxyServer::actionPerformed(xdata::Event& e)  
 {
   if (e.type() == "ItemRetrieveEvent") {
-    std::ostringstream oss;
-    oss << "urn:xdaq-monitorable:" << class_.value_ << ":" << instance_.value_;
-    xdata::InfoSpace *is = xdata::InfoSpace::get(oss.str());
 
-    is->lock();
     std::string item = dynamic_cast<xdata::ItemRetrieveEvent&>(e).itemName();
     // Only update those locations which are not always up to date
     if      (item == "connectedSMs")
@@ -3163,7 +3159,6 @@ void SMProxyServer::actionPerformed(xdata::Event& e)
     }
     //else if (item == "progressMarker")
     //  progressMarker_ = ProgressMarker::instance()->status();
-    is->unlock();
   } 
 }
 
